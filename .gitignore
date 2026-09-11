@@ -80,6 +80,7 @@ supabase/.branches/
 .waha-data/
 .epic-executor/
 .playwright-mcp/
+.local-dev/
 
 # Sentry Config File
 .env.sentry-build-plugin
