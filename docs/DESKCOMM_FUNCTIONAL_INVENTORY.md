@@ -1,10 +1,10 @@
 # Inventário funcional e técnico do DeskcommCRM
 
-**Fase:** 1 — execução funcional local com PostgreSQL e inventário
+**Fase:** 1/2 — inventário e execução funcional local com PostgreSQL
 
 **Baseline:** `deskcomm-baseline` / `61a65b3894d5ba2e0a41398705503a81e31dbc16`
 
-**Branch do inventário:** `fase-1-postgres-inventario`
+**Branches:** `fase-1-postgres-inventario` e `fase-2-postgres-local-runtime`
 
 **Data da coleta:** 2026-09-11
 **Repositório de trabalho:** auxiliar `CRM-Geral-Deskcomm`
@@ -63,7 +63,7 @@ O sistema é uma aplicação Next.js 16 com React 19, TypeScript, Supabase JS/SS
 | RPC exposto à aplicação                   | Função SQL pode existir               | PostgREST/RPC HTTP                                   | Funções SQL locais existem, endpoint HTTP Supabase não                 |
 | Vetores/RAG                               | PostgreSQL com pgvector               | Não é exclusivo do Supabase                          | Bloqueado: `vector.control` ausente                                    |
 
-Conclusão operacional: o banco relacional pode ser executado em PostgreSQL padrão, mas o aplicativo não é “PostgreSQL-only” no estado atual. O boot e as rotas principais exigem os serviços HTTP de Auth, PostgREST, Storage e Realtime do ecossistema Supabase, além das variáveis de ambiente correspondentes. Remover essa dependência seria uma etapa de arquitetura fora do escopo desta Fase 1.
+Conclusão operacional: o banco relacional pode ser executado em PostgreSQL padrão. Na Fase 2, Auth, PostgREST e RPC ganharam um adaptador local mínimo sobre o Next.js, preservando os clientes Supabase e o RLS. Storage, Realtime, WAHA, Redis e provedores externos continuam dependências opcionais; remover completamente essas dependências é uma etapa de arquitetura posterior.
 
 ### 3.2 Inicialização e autenticação
 
@@ -112,7 +112,11 @@ Foram encontrados **112 arquivos `page.tsx`**.
 
 Rotas representativas: `/app`, `/app/inbox`, `/app/contacts`, `/app/leads/[id]`, `/app/kanban`, `/app/agenda`, `/app/ai/agents`, `/app/ai/knowledge/sources`, `/app/settings/tenant/whatsapp`, `/admin/tenants`, `/admin/audit`, `/onboarding/setup-ai` e `/vitrine-agenda`.
 
-A inspeção visual não foi concluída porque o boot da aplicação falha antes de servir as páginas sem as variáveis Supabase obrigatórias e os serviços HTTP associados. Portanto, este inventário de telas é de código/rotas, não uma aprovação visual de UX.
+A execução visual da Fase 2 foi concluída no navegador local com o seed de desenvolvimento: login, inbox, contatos, funis, agenda, tarefas, central de IA e dashboard administrativo abriram. As integrações externas continuam fora do escopo desta aprovação visual.
+
+## 9. Runtime local da Fase 2
+
+O procedimento operacional completo está em [`docs/LOCAL_POSTGRES_SETUP.md`](LOCAL_POSTGRES_SETUP.md). A execução confirmou o caminho vivo `login → sessão local → proxy → REST/RPC → PostgreSQL/RLS → telas`, além do CRUD básico de `contacts`. O serviço local sobe com Redis, WAHA, Storage e Realtime degradados quando não configurados, sem afirmar que essas integrações externas foram simuladas.
 
 ## 6. Inventário de APIs
 
