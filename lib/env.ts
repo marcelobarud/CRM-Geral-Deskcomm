@@ -65,6 +65,16 @@ const schema = z.object({
   // Node
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
+  // Runtime local reversível — nunca habilitar em produção.
+  LOCAL_DEV_AUTH: z
+    .enum(["true", "false"])
+    .optional()
+    .default("false")
+    .transform((v) => v === "true"),
+  LOCAL_DEV_AUTH_EMAIL: z.string().email().default("admin@crmgeral.local"),
+  LOCAL_DEV_AUTH_PASSWORD: z.string().optional().default(""),
+  LOCAL_DEV_AUTH_SECRET: z.string().optional().default(""),
+
   // Supabase — obrigatórias sempre (até pra dev local)
   NEXT_PUBLIC_SUPABASE_URL: requiredAlways("NEXT_PUBLIC_SUPABASE_URL").url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: requiredAlways("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
