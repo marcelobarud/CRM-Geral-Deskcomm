@@ -661,7 +661,7 @@ function throwOnDbError(
 ): void {
   if (!err) return;
   // conversations/messages apontam para contacts com ON DELETE RESTRICT.
-  if (err.code === "23503") {
+  if (err.code === "23503" || err.code === "23001") {
     throw new ApiError(
       409,
       "state_conflict",
@@ -698,30 +698,21 @@ export async function deleteContactHandler(
     );
   }
 
-  // Mensagens e conversas RESTRICT no contato: apagar primeiro, senão o DELETE
-  // da ficha falha para qualquer lead que já falou no canal.
-  const { error: msgErr } = await supabase
-    .from("messages")
-    .delete()
-    .eq("contact_id", contactId)
-    .eq("organization_id", ctx.organization_id);
-  throwOnDbError(msgErr, ctx.requestId, ctx.idioma);
-
-  const { error: convErr } = await supabase
-    .from("conversations")
-    .delete()
-    .eq("contact_id", contactId)
-    .eq("organization_id", ctx.organization_id);
-  throwOnDbError(convErr, ctx.requestId, ctx.idioma);
-
-  const { data: deleted, error: delErr } = await supabase
-    .from("contacts")
-    .delete()
-    .eq("id", contactId)
-    .eq("organization_id", ctx.organization_id)
-    .select("id")
-    .maybeSingle();
-  throwOnDbError(delErr, ctx.requestId, ctx.idioma);
+  // Uma RPC invoker mantém RLS e transação também no adaptador PostgreSQL local.
+  const { data: deleted, error: delErr } = await supabase.rpc("fn_apagar_contato_com_historico", {
+    p_contact_id: contactId,
+    p_organization_id: ctx.organization_id,
+  });
+  if (delErr) {
+    const a = actorAuditPayload(ctx.actor);
+    await audit({
+      action: "contact.delete_blocked", actorUserId: a.actorUserId,
+      organizationId: ctx.organization_id, resourceType: "contact", resourceId: contactId,
+      requestId: ctx.requestId,
+      metadata: { ...a.metadataActor, motivo: delErr.code === "23503" || delErr.code === "23001" ? "vinculo_restrict" : "falha_ao_apagar", apagados: [] },
+    });
+    throwOnDbError(delErr, ctx.requestId, ctx.idioma);
+  }
   if (!deleted) {
     throw new ApiError(
       404,
@@ -757,5 +748,5 @@ export async function deleteContactHandler(
     metadata: a.metadataActor,
   });
 
-  return { id: deleted.id as string };
+  return { id: contactId };
 }

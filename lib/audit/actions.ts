@@ -56,6 +56,7 @@ export const AUDIT_ACTIONS = [
   "lead.imported",
   "contact.created",
   "contact.updated",
+  "contact.delete_blocked",
   "contacts.imported",
   "contact.anonymized",
   "contact.merge_pending",

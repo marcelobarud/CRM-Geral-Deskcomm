@@ -1,87 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const auditSpy = vi.fn(async () => undefined);
-
-vi.mock("@/lib/audit", () => ({
-  audit: auditSpy,
-  isServiceRoleConfigured: () => false,
-  hashEmail: (e: string) => e,
-}));
-
-const ORG = "c05e7a00-0000-4000-8000-000000000001";
-const CONTATO = "c05e7a00-0000-4000-8000-0000000000c1";
-const USUARIO = "c05e7a00-0000-4000-8000-0000000000a1";
-
-const chamadas: Array<{ tabela: string; op: string }> = [];
-
-function clienteFalso(opts?: { missing?: boolean; fk?: boolean }): unknown {
-  return {
-    from: (tabela: string) => {
-      const del = {
-        eq: () => del,
-        select: () => del,
-        maybeSingle: async () =>
-          opts?.missing
-            ? { data: null, error: null }
-            : { data: { id: CONTATO }, error: null },
-        then: (r: (v: unknown) => unknown) =>
-          r({
-            error: opts?.fk && tabela !== "contacts" ? { code: "23503", message: "fk" } : null,
-          }),
-      };
-      return {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              maybeSingle: async () =>
-                opts?.missing
-                  ? { data: null, error: null }
-                  : { data: { id: CONTATO, organization_id: ORG }, error: null },
-            }),
-          }),
-        }),
-        delete: () => {
-          chamadas.push({ tabela, op: "delete" });
-          return del;
-        },
-      };
-    },
-    rpc: () => ({ then: (r: (v: unknown) => unknown) => r({ error: null }) }),
-  };
+import type { HandlerCtx } from "@/lib/api/handlers/types";
+const auditSpy = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("@/lib/audit", () => ({ audit: auditSpy, isServiceRoleConfigured: () => false, hashEmail: (email: string) => email }));
+const ctx: HandlerCtx = { organization_id: "org-a", actor: { type: "user", id: "user-a" }, requestId: "req-test" };
+function fake(options: { missing?: boolean; rpcFalse?: boolean; error?: { code: string; message: string } } = {}) {
+  const deleteSpy = vi.fn(() => { throw new Error("DELETE fora da transação"); });
+  const rpc = vi.fn(async (name: string) => name === "fn_apagar_contato_com_historico"
+    ? { data: !options.rpcFalse, error: options.error ?? null } : { data: null, error: null });
+  const chain = { eq: () => chain, maybeSingle: async () => ({ data: options.missing ? null : { id: "contact-a" }, error: null }) };
+  return { from: () => ({ select: () => chain, delete: deleteSpy }), rpc, deleteSpy };
 }
-
-describe("deleteContactHandler", () => {
-  beforeEach(() => {
-    auditSpy.mockClear();
-    chamadas.length = 0;
-  });
-
-  it("apaga mensagens e conversas antes do contato e audita", async () => {
+beforeEach(() => auditSpy.mockClear());
+describe("exclusão de contato", () => {
+  it("usa uma RPC transacional e emite sucesso", async () => {
     const { deleteContactHandler } = await import("@/app/api/v1/contacts/_handler");
-    const out = await deleteContactHandler(
-      clienteFalso() as never,
-      { organization_id: ORG, actor: { type: "user", id: USUARIO }, requestId: "req-1" },
-      CONTATO,
-    );
-    expect(out).toEqual({ id: CONTATO });
-    expect(chamadas.map((c) => c.tabela)).toEqual(["messages", "conversations", "contacts"]);
-    const ultima = (auditSpy.mock.calls.at(-1) as unknown as [Record<string, unknown>] | undefined)?.[0];
-    expect(ultima).toMatchObject({
-      action: "contact.deleted",
-      resourceId: CONTATO,
-      organizationId: ORG,
-    });
+    const client = fake();
+    expect(await deleteContactHandler(client as never, ctx, "contact-a")).toEqual({ id: "contact-a" });
+    expect(client.rpc).toHaveBeenCalledWith("fn_apagar_contato_com_historico", { p_contact_id: "contact-a", p_organization_id: "org-a" });
+    expect(client.deleteSpy).not.toHaveBeenCalled();
+    expect(auditSpy).toHaveBeenCalledWith(expect.objectContaining({ action: "contact.deleted" }));
   });
-
-  it("404 se o contato não existe na org", async () => {
+  it.each(["23503", "23001", "42501", "XX000"])("audita rollback de %s sem sucesso nem exclusão parcial", async code => {
     const { deleteContactHandler } = await import("@/app/api/v1/contacts/_handler");
-    await expect(
-      deleteContactHandler(
-        clienteFalso({ missing: true }) as never,
-        { organization_id: ORG, actor: { type: "user", id: USUARIO }, requestId: "req-1" },
-        CONTATO,
-      ),
-    ).rejects.toMatchObject({ status: 404, code: "not_found" });
+    const client = fake({ error: { code, message: "failure" } });
+    await expect(deleteContactHandler(client as never, ctx, "contact-a")).rejects.toMatchObject({ status: code === "23503" || code === "23001" ? 409 : 500 });
+    expect(client.deleteSpy).not.toHaveBeenCalled();
+    expect(auditSpy).toHaveBeenCalledWith(expect.objectContaining({ action: "contact.delete_blocked", metadata: expect.objectContaining({ apagados: [] }) }));
+    expect(auditSpy).not.toHaveBeenCalledWith(expect.objectContaining({ action: "contact.deleted" }));
+  });
+  it.each([{ missing: true }, { rpcFalse: true }])("404 para ficha inacessível ou removida em corrida", async options => {
+    const { deleteContactHandler } = await import("@/app/api/v1/contacts/_handler");
+    await expect(deleteContactHandler(fake(options) as never, ctx, "contact-a")).rejects.toMatchObject({ status: 404 });
     expect(auditSpy).not.toHaveBeenCalled();
   });
 });
