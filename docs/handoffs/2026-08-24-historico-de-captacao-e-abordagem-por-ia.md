@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # Histórico de leads captados + abordagem escrita pela IA + a automação para de mentir
 
 Entrega de 2026-08-24. Três coisas, e a terceira nasceu de um relato de uso

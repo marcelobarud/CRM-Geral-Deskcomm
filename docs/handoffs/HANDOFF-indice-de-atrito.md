@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # HANDOFF — Índice de Atrito (spec 17)
 
 > **Leia este arquivo no início de qualquer sessão que continue este trabalho.**

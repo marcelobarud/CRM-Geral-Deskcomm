@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # W3 — Passar para um humano (pacote `escalar`)
 
 **Worktree:** `/Users/rafaelmelgaco/DeskcommCRM-ia360-w3-escalar` (branch `feat/ia-360-w3-escalar`, base `d25cd1c`)

@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # HANDOFF — IA 360
 
 > Documento **vivo**. Alimentado a cada progresso, cada bug encontrado e cada bug corrigido.

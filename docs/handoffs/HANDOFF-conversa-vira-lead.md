@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # HANDOFF — A conversa vira lead (spec 17)
 
 > Branch `feat/conversa-vira-lead`, empilhada sobre `feat/tres-papeis-do-agente` (spec 16, PR #181).

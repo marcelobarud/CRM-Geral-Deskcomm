@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # Waves 1 e 2 — DevVivo · 2026-07-24
 
 > Wave 1 (CORE 1 — a IA é dona do negócio) abaixo; **Wave 2 (o slot) no fim do arquivo.**
