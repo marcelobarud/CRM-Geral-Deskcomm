@@ -1,3 +1,7 @@
+
+
+> Snapshot histórico da construção original, não backlog vigente. Referências a tailwind.config.ts descrevem configuração antiga; o frontend atual usa CSS-first. Revalide estado e decisões antes de retomar; AGENTS.md é o contrato global.
+
 # DeskcommCRM — Workflow de Construção
 
 Ordem definida pelo Rafael: **PRD → Regras de Negócio → Specs → Epics → Stories → Plano com Tasks**.

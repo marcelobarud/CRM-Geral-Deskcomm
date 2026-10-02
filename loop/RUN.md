@@ -1,3 +1,7 @@
+
+
+> Protocolo especializado herdado do mantenedor Deskcomm, aplicável apenas quando esse fluxo for explicitamente invocado. Não governa desenvolvimento interno do CRM Geral. AGENTS.md do checkout prevalece; origin/main nos exemplos assume o repositório original verificado. Memórias externas/grafos ausentes são opcionais. Publicação e mensagens exigem autorização da tarefa.
+
 # RUN.md — como disparar o gov-loop
 
 O loop é o mesmo em qualquer modo: uma sessão descartável executa `loop/LOOP.md`
@@ -21,7 +25,7 @@ maquinaria sem tocar o checkout principal; ele não é a casa do loop.
   Isso arma via `core.hooksPath`: `pre-commit` (imutabilidade do features.json —
   só `passes`/`verification` mudam fora de sessão humana com
   `DESKCOMM_GOV_PLAN_EDIT=1`; tripla de migration com NNNN validado contra todas
-  as branches locais; freeze de `tests/invariants/**`) e `pre-push` (push só com
+  as branches locais; freeze de `tests/invariants/**`) e `pre-push` (push para main/master só com
   `DESKCOMM_GOV_PHASE_MERGE=1`, exportada só pelo ritual de virada).
 - **Guard PreToolUse do Claude Code** (merge ADITIVO no `.claude/settings.json`
   local — preserva hooks já existentes, ex.: do Lina Space):
@@ -116,7 +120,7 @@ profundidade).
 ## Regras de segurança do loop (invioláveis — e ENFORÇADAS, não só escritas)
 
 1. **Nunca `git push` sem checkpoint aprovado — enforcement físico**: o hook
-   `loop/hooks/pre-push` recusa qualquer push sem `DESKCOMM_GOV_PHASE_MERGE=1`, e
+   `loop/hooks/pre-push` recusa push para main/master sem `DESKCOMM_GOV_PHASE_MERGE=1`, e
    essa variável só é exportada pelo ritual de virada de fase (CHECKPOINT.md), que
    só dispara com `.approved` do dono. Nada sai da máquina sem gate humano — por
    construção, não por obediência. (Alternativa do dono: abrir PR — CHECKPOINT.md.)
