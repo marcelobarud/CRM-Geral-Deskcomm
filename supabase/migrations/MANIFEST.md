@@ -300,3 +300,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 |---|---|---|
 | `20261002180000` | `0237_crm_geral_exclusao_transacional` | Exclusão invoker atômica, cascade interno de follow-up e rollback por FK/RLS. |
 | `20261002181000` | `0238_crm_geral_auditoria_e_followup_rls` | Revoga adulteração de audit e aplica autorização por operação vigente nas rotas. |
+| `20261002182000` | `0239_crm_geral_lgpd_conteudo_associado` | Unifica redação no footprint local, transcrições e proteção contra worker atrasado; sem backfill automático. |
