@@ -1,6 +1,6 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MagnifyingGlass } from "@/lib/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,6 +60,16 @@ interface Props {
 export function InboxFilters({ value, onChange }: Props) {
   const t = useT();
   const [searchInput, setSearchInput] = useState(value.search);
+  const propagated = useRef(value.search);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { valueRef.current = value; onChangeRef.current = onChange; }, [value, onChange]);
+  useEffect(() => {
+    if (value.search !== propagated.current) {
+      propagated.current = value.search;
+      setSearchInput(value.search);
+    }
+  }, [value.search]);
   const { data: channels } = useChannelSessions({ refetchInterval: 30_000 });
   const { activeOrg } = useAuth();
   const { data: tagVocabulary } = useConversationTagVocabulary(activeOrg?.orgId ?? null);
@@ -95,8 +105,9 @@ export function InboxFilters({ value, onChange }: Props) {
   // Debounce search input → propagate to parent.
   useEffect(() => {
     const t = setTimeout(() => {
-      if (searchInput !== value.search) {
-        onChange({ ...value, search: searchInput });
+      if (searchInput !== valueRef.current.search) {
+        propagated.current = searchInput;
+        onChangeRef.current({ ...valueRef.current, search: searchInput });
       }
     }, 250);
     return () => clearTimeout(t);
