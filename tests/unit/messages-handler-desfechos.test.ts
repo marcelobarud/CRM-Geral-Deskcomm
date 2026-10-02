@@ -26,6 +26,7 @@ const CONTACT = '33333333-3333-4333-8333-333333333333';
 const SESSION = '44444444-4444-4444-8444-444444444444';
 const USER = '55555555-5555-4555-8555-555555555555';
 const WAHA_BASE = 'http://localhost:3030';
+const insertedMessage = vi.fn();
 
 // A URL assinada do Storage é montada com o admin client; ele valida env no
 // import, e o desfecho de mídia precisa controlar sucesso E falha da assinatura.
@@ -142,6 +143,7 @@ function makeSupabase(
       if (table === 'messages') {
         return {
           insert: (row: Row) => {
+            insertedMessage(row);
             state.message = {
               id: 'msg-1',
               external_id: null,
@@ -204,6 +206,18 @@ afterEach(() => {
 });
 
 describe('sendMessageHandler — os 6 desfechos do envio', () => {
+  it.each(['https://127.0.0.1/x', 'https://169.254.169.254/x', 'https://[::1]/x'])(
+    'recusa media_url %s antes de inserir mensagem ou enviar', async media_url => {
+      insertedMessage.mockClear();
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(sendMessageHandler(makeSupabase(conversationRow()), ctx,
+        textInput({ type: 'image', body: undefined, media_url })))
+        .rejects.toMatchObject({ status: 422, code: 'unsafe_media_url' });
+      expect(insertedMessage).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
   it("revalida a lista no sink, inclusive para automação, sem transformar teste em opt-out", async () => {
     wahaConfigured(true);
     const fetchMock = vi.fn();

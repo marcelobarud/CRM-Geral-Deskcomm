@@ -14,7 +14,17 @@ export type MessageKind = "image" | "video" | "audio" | "document";
  * `docs/doctrine/restricao-de-canal.md` proíbe.
  */
 export function isMediaPathOwnedBy(path: string, orgId: string, conversationId: string): boolean {
-  return path.startsWith(`${orgId}/${conversationId}/`);
+  const prefix = `${orgId}/${conversationId}/`;
+  if (!path.startsWith(prefix)) return false;
+  return isSafeMediaFilename(path.slice(prefix.length));
+}
+
+/** Nome literal de objeto: rejeita ambiguidades, em vez de corrigir a entrada. */
+export function isSafeMediaFilename(name: string): boolean {
+  const normalized = name.normalize("NFKC");
+  return normalized.length > 0 && !/[\/\\%\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(normalized)
+    && !normalized.includes("..") && !normalized.includes(":")
+    && normalized !== "." && normalized.trim() === normalized;
 }
 
 const DOCUMENT_MIMES = new Set([
