@@ -1,3 +1,7 @@
+
+
+> Receita histórica/especializada do fluxo Deskcomm upstream. AGENTS.md do CRM Geral prevalece. Origin/main nos exemplos assume checkout dedicado cujo origin é o repositório original; não execute esses rituais no fork interno. Revalide comandos, dependências e provas no destino autorizado.
+
 # Depois de abrir o PR
 
 ## O que vai parecer erro e não é

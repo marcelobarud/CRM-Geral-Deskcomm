@@ -14,13 +14,15 @@ quem="$(bash "$aqui/../quem-sou.sh" --curto 2>/dev/null || echo contribuidor)"
 
 raiz="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 hooks="$(git -C "$raiz" config --get core.hooksPath 2>/dev/null || true)"
-estado_hooks="hooks de git do contribuidor NÃO armados (bash .agents/skills/deskcomm-contribuir/scripts/armar-hooks.sh)"
+estado_hooks="hooks de git do contribuidor NÃO armados"
 case "$hooks" in *deskcomm-contribuir*) estado_hooks="hooks de git do contribuidor armados" ;; esac
 
 cat <<TXT
-[DeskcommCRM] Este clone é de um contribuidor (não do mantenedor). Antes de codar ou commitar,
-carregue a skill deskcomm-contribuir: ela mede o que a triagem mede (branch atrasada, tripla de
-migration, marca do fork no diff, fragmento de release) e evita retrabalho. $estado_hooks.
-Guias para outras situações: deskcomm-instalar, deskcomm-cliente-novo, deskcomm-metricas, deskcomm-prompt.
+[CRM Geral] Este clone é de um contribuidor segundo o detector do fluxo original; isso não define o destino da tarefa.
+Leia AGENTS.md do checkout como contrato global; CLAUDE é detalhamento subordinado.
+Use deskcomm-contribuir somente se a tarefa pedir contribuição ao upstream Deskcomm verificado.
+Desenvolvimento interno do fork não inicia ritual upstream nem arma hooks automaticamente.
+Estado informativo do checkout: $estado_hooks. Não é instrução para mudar a configuração.
+Guias especializados: deskcomm-instalar (VPS original), deskcomm-cliente-novo, deskcomm-metricas, deskcomm-prompt.
 TXT
 exit 0

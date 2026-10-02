@@ -3,7 +3,7 @@ name: deskcomm-metricas
 description: Guia de análise das métricas de uma instalação do DeskcommCRM como um analista de dados experiente — conversão, funil, tempo de resposta, handoff, follow-ups, custo de IA, motivos de perda, horários de pico — lendo o banco por consultas agregadas sem dado pessoal. Use SEMPRE que alguém perguntar "como está o desempenho", "o agente está vendendo?", "por que a conversão caiu", "quanto estou gastando com IA", "onde o funil trava", "quantos atendimentos", "que horas os clientes mais falam", pedir relatório, dashboard ou análise estratégica das conversas, ou quiser saber se vale otimizar o prompt. Declara a régua de cada número, o fuso e o que não foi medido.
 metadata:
   publico: dono do negócio, agência, operador
-  leitura: SQL agregado via SUPABASE_DB_URL (pooler), nunca texto de mensagem
+  leitura: SQL agregado pela conexão autorizada do ambiente, nunca texto de mensagem
 ---
 
 # Analisar as métricas de uma instalação
@@ -35,11 +35,7 @@ ao lado de cada número e transforma medida em decisão.
 
 ## Passo 0 — onde está o dado e como chegar nele
 
-Não há banco na VPS: o Postgres é o Supabase, alcançado pela connection string `SUPABASE_DB_URL`
-do `.env` da instalação (Session pooler). Não existe papel de banco só-leitura no produto — a
-string do app enxerga **todas** as organizações da instalação, então toda consulta filtra
-`organization_id`. Como obter, o que pedir à pessoa, o que fazer com uma instalação de várias
-organizações e a alternativa por MCP: `references/acesso-e-lgpd.md`.
+Identifique primeiro o ambiente: desenvolvimento PostgreSQL local do CRM Geral ou distribuição Supabase/VPS original. O compose original não hospeda o banco; isso não significa que toda instalação ou desenvolvimento precise de Supabase Cloud. Use conexão autorizada, com saída mascarada e agregados somente. Toda consulta filtra `organization_id`, inclusive com service role. Consulte `references/acesso-e-lgpd.md`; o contrato global de segredos é AGENTS.md.
 
 ## Passo 1 — a triagem do pedido
 

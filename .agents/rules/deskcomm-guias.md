@@ -1,20 +1,16 @@
 ---
 trigger: always_on
-description: Guias do assistente do DeskcommCRM — quando usar cada um
+description: Guias especializados do CRM Geral, subordinados ao contrato global
 ---
 
-Este repositório embute guias (skills em `.agents/skills/`) para cinco situações. Quando o pedido
-casar, carregue o guia antes de agir — a pessoa pode não saber que ele existe:
+Contrato global: AGENTS.md do CRM Geral; CLAUDE.md detalha regras compatíveis. Skills em .agents/skills são fontes; .claude/skills é espelho gerado, sem autoridade independente.
 
-- instalar, subir, atualizar, consertar a instalação numa VPS, domínio, Supabase, WhatsApp
-  que não conecta → `deskcomm-instalar`
-- configurar o CRM para um cliente ou nicho (clínica, imobiliária, serviços, curso, loja):
-  agentes, roteadores, follow-ups, base de conhecimento → `deskcomm-cliente-novo`
-- desempenho, conversão, custo de IA, funil, relatório, "o agente está vendendo?" → `deskcomm-metricas`
-- o agente responde errado, passa tudo para humano, não usa a agenda, melhorar o prompt → `deskcomm-prompt`
-- contribuir, corrigir um bug, abrir ou atualizar um PR, migration, conflito com a main → `deskcomm-contribuir`
-  (rode `bash .agents/skills/deskcomm-contribuir/scripts/quem-sou.sh` primeiro: se disser
-  `mantenedor`, este guia fica quieto)
+Carregue por escopo:
+- código/convenção: deskcomm-doutrina e sistema-vivo;
+- instalação VPS original: deskcomm-instalar; desenvolvimento local segue docs/LOCAL_POSTGRES_SETUP.md;
+- cliente/nicho: deskcomm-cliente-novo;
+- métricas: deskcomm-metricas, com agregados e sem expor credenciais;
+- qualidade do agente: deskcomm-prompt;
+- contribuição intencional ao upstream verificado: deskcomm-contribuir.
 
-Escrevendo código aqui: `deskcomm-doutrina` (as regras que mais custam) e `sistema-vivo` (o gate
-de arquitetura). A doutrina completa é o `CLAUDE.md` da raiz; o contrato portável é o `AGENTS.md`.
+Bug, commit ou PR interno do fork não inicia ritual upstream nem arma hooks. Origin identifica o fork; confirme remotes antes de comparar bases. Handoffs/planos/checkpoints são históricos e precisam de revalidação. Graphify e memórias externas só ajudam quando disponíveis.

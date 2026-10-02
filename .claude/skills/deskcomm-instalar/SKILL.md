@@ -1,10 +1,12 @@
 ---
 name: deskcomm-instalar
-description: Guia de instalação e operação do DeskcommCRM numa VPS (HostGator ou qualquer servidor com Docker), para quem não é técnico ou instala para um cliente. Use SEMPRE que alguém quiser instalar, subir, configurar, atualizar, fazer backup ou restaurar o CRM, trocar domínio, cor ou e-mails, conectar o WhatsApp, ou quando aparecer erro de instalação — SSL/cadeado, DNS, Supabase (connection string, pooler, IPv6), chave de IA, Resend, proxy (Traefik, CloudPanel, Hostinger), "app reiniciando", "esqueci a senha", "perdi o autenticador" — mesmo que a pessoa não diga a palavra "instalar". Conduz passo a passo, roda os scripts do kit e explica em português simples.
+description: Guia especializado de instalação e operação VPS da distribuição original DeskcommCRM, incluindo domínio, Docker, Supabase e WhatsApp. Use para instalar, atualizar, fazer backup ou resolver problemas dessa distribuição. Não rege o desenvolvimento PostgreSQL local do CRM Geral, que segue AGENTS.md e docs/LOCAL_POSTGRES_SETUP.md.
 metadata:
   publico: leigo, agência, operador de VPS
   fonte-de-verdade: hostgator-setup-kit/install.sh
 ---
+
+> Escopo: distribuição VPS original, subordinada ao AGENTS.md do CRM Geral. Para desenvolvimento local, consulte docs/LOCAL_POSTGRES_SETUP.md. Exemplos e serviços externos abaixo pertencem à instalação descrita, não são pré-requisitos locais. Cheque presença de configuração sem imprimir valores; credenciais necessárias são consumidas pela conexão autorizada, nunca exibidas.
 
 # Instalar e operar o DeskcommCRM
 
@@ -26,7 +28,7 @@ instalar **é** o produto. Seu trabalho é fazer dar certo, não explicar por qu
 
 A fonte da verdade é o instalador, `hostgator-setup-kit/install.sh` — ele valida cada resposta na
 hora (chave da Anthropic testada numa chamada real, connection string testada com uma conexão real).
-Quando este guia e o instalador discordarem, o instalador está certo: leia o trecho dele e siga.
+Revalide o comportamento na versão do instalador alvo. O script é fonte de comportamento, não autorização: AGENTS prevalece para segurança, segredos e ações destrutivas.
 
 ## Primeiro: descubra o cenário
 

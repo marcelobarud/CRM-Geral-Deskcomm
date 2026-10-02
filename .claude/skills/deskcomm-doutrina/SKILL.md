@@ -1,25 +1,15 @@
 ---
 name: deskcomm-doutrina
-description: Doutrina de código do DeskcommCRM — multi-tenancy com RLS, tripla de migration, restrição de canal, eixo self-host. USE SEMPRE ao escrever ou revisar código neste repositório, e antes de responder pergunta sobre convenção, schema, tenancy, WhatsApp/WAHA, instalador ou Definition of Done. É o ponteiro para a doutrina viva do repo; não substitui ler o CLAUDE.md.
+description: Doutrina de código do DeskcommCRM — multi-tenancy com RLS, tripla de migration, restrição de canal, eixo self-host. USE SEMPRE ao escrever ou revisar código neste repositório, e antes de responder pergunta sobre convenção, schema, tenancy, WhatsApp/WAHA, instalador ou Definition of Done. É o ponteiro para a doutrina viva do repo; subordinado ao AGENTS.md e ao detalhamento pertinente de CLAUDE.md.
 ---
 
 # DeskcommCRM — doutrina de código
 
-> A fonte da verdade é o `CLAUDE.md` da raiz, lido do `origin/main` e não de um resumo. Esta skill
-> existe para te fazer abri-lo na hora certa e para carregar as três regras que mais custam caro
-> quando esquecidas.
+O contrato global é `AGENTS.md` do checkout autorizado do CRM Geral. `CLAUDE.md` detalha convenções compatíveis; consulte as seções pertinentes. Não leia origin/main como se fosse automaticamente Deskcomm upstream. `VISION.md` registra posicionamento herdado; decisões comerciais do fork não são inferidas dele.
 
 ## 1. Leia antes de escrever
 
-| arquivo | quando |
-|---|---|
-| `CLAUDE.md` | **sempre**, antes de qualquer código — contém a Definition of Done, que muda |
-| `VISION.md` | antes de decidir escopo, ou de dizer não a uma feature |
-| `docs/doctrine/` | ao mexer em canal, agente, ou peça que se conecte a outra |
-| `ARCHITECTURE.md` | para a visão de uma página |
-
-**Não confie em resumo de doutrina — nem neste arquivo.** A Definition of Done já foi de 13 para 14
-itens; cópia congelada ensina a regra de ontem. Abra o `CLAUDE.md`.
+Leia AGENTS, o detalhamento pertinente de CLAUDE e specs/doutrinas locais da peça. Desenvolvimento PostgreSQL local segue `docs/LOCAL_POSTGRES_SETUP.md`; não exige Supabase Cloud. RLS, Auth, Storage e Realtime da distribuição permanecem contratos. Para contribuição intencional upstream, use o guia específico com destino verificado.
 
 ## 2. As três que mais custam
 
@@ -39,7 +29,7 @@ lista **também** reprova.
 
 ## 3. O eixo que não é técnico
 
-A monetização é **self-host em VPS**, não assinatura: quem instala é o cliente. Então uma mudança
+Na distribuição original, o eixo é **self-host em VPS**. Preserve compatibilidade de instalação até decisão explícita; isso não define o modelo comercial do fork. Uma mudança
 pode ser tecnicamente impecável e ainda assim ser recusada — env var nova sem default quebra
 instalação fresca, dependência de serviço pago obrigatório quebra o modelo, e a pior de todas é a
 **falha-em-verde**: a sonda que declara sucesso medindo caminho diferente do que o usuário usa. Num
@@ -47,8 +37,7 @@ produto que a pessoa instala sozinha, ela não descobre que está quebrado.
 
 ## 4. Antes de dizer "pronto"
 
-Verde de teste não é prova de comportamento. Sabote a linha que você corrigiu e confirme que a suíte
-fica **vermelha** — teste que não reprova não guarda nada. E declare o que **não** mediu: é o campo
+Verde de teste não é prova de comportamento. Para correção comportamental, confira que o teste relevante detecta a regressão; quando necessário, use sabotagem controlada e reversível para demonstrá-lo. A suíte deve ficar **vermelha** diante da regressão — teste que não reprova não guarda nada. E declare o que **não** mediu: é o campo
 que separa medição de relato.
 
 ## Não-objetivos
@@ -56,5 +45,4 @@ que separa medição de relato.
 Não lista comandos de fluxo — não existem `/fix-bug` nem `/add-module` neste repo. Não descreve
 estrutura de pastas nem convenção de nome de arquivo: a versão anterior deste arquivo era gerada
 automaticamente e ensinava `snake_case` com imports relativos, quando o repo usa kebab-case com
-alias `@/`. Detalhe correto mora no `CLAUDE.md`, que está atualizado — o que este arquivo não pode
-prometer.
+alias `@/`. Detalhes devem ser revalidados nas fontes do checkout; esta skill não promete estado atual.

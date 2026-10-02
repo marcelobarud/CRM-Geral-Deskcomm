@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # pre-voo.sh — mede, ANTES do PR, o que a triagem do mantenedor mede DEPOIS.
 #
 # Só lê. Nunca edita, nunca bloqueia: imprime uma linha por item, com a medida

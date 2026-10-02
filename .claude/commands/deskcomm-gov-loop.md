@@ -1,10 +1,5 @@
 ---
-description: Executa UMA sessão do gov-loop do DeskcommCRM (uma feature de governança, depois morre)
+description: Protocolo especializado herdado de governança Deskcomm, só para execução explicitamente solicitada
 ---
-Execute o protocolo do gov-loop — DeskcommCRM (Governança de Atendimento): leia
-loop/LOOP.md e siga-o à risca. Lane única: core.
 
-Lembretes que valem antes mesmo de ler o arquivo: uma sessão entrega UMA feature;
-o estado vem do disco e volta pro disco; gov-verifier antes de qualquer passes:true
-(features.json só muda via node loop/update-feature.ts); você nunca faz git push;
-a doutrina de domínio soberana é o CLAUDE.md deste repo.
+AGENTS.md do CRM Geral é o contrato global; CLAUDE.md é detalhamento subordinado. Loop/LOOP.md e plan descrevem o fluxo original e seus snapshots, não o backlog atual. Só siga uma rodada quando explicitamente pedida, revalidando base, estado e autorização. Não inicie o loop em tarefa interna comum, não faça push automático e não considere origin/main deste fork como Deskcomm upstream.

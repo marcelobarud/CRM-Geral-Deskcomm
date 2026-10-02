@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # quem-sou.sh — diz se quem está neste clone é o mantenedor do DeskcommCRM ou um
 # contribuidor, e POR QUÊ. A skill deskcomm-contribuir (e os hooks) usam a
 # primeira palavra da saída; o resto é para gente ler.
