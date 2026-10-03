@@ -426,6 +426,8 @@ Honorários e telefonia especializada ficam fora do core sugerido, sem excluir f
 
 ## 29. Questões para o usuário
 
+**Atualização em 02/10/2026:** as respostas foram recebidas após a Fase 2.4 e estão registradas abaixo. Esta lista original é preservada como referência histórica; as decisões registradas prevalecem sobre os pontos anteriormente marcados como pendentes quando tratam do mesmo recorte.
+
 Responda, por exemplo, `1A, 2B, 3A...`. As alternativas definem preferência de produto; a resposta não substitui um pedido posterior de implementação. Questões não respondidas continuam pendentes.
 
 1. **B2B — empresa deve ter ficha própria?** A) Sim, vinculada aos contatos atuais. B) Não, manter informação no contato. C) Quero avaliar antes.
@@ -443,3 +445,26 @@ Responda, por exemplo, `1A, 2B, 3A...`. As alternativas definem preferência de 
 13. **Banco externo — existe necessidade real?** A) Sim, um caso de leitura delimitado a especificar. B) Quero conector PostgreSQL administrável e genérico como módulo. C) Não por enquanto.
 
 Verificação de encerramento: somente este relatório foi criado; a auditoria 2.1 preexistente permaneceu não rastreada e preservada. Nenhuma implementação, migration, alteração de banco, instalação de dependências, cherry-pick, merge, rebase, commit ou push nesta fase. Não foram executados testes da aplicação: o escopo é documental, com leitura estática e conferência de Git.
+
+### Decisões do usuário após a Fase 2.4
+
+**CONFIRMADO — escolhas de produto recebidas em 02/10/2026:** `1A, 2B, 3A, 4A, 5A, 6A, 7B, 8A, 9A, 10A, 11C, 12C`. A resposta corresponde à última lista apresentada na conversa, com 12 perguntas: a distribuição já havia sido definida na Fase 2.4, e banco externo passou da posição original 13 para a posição 12. O registro não autoriza implementação, não define ordem de execução e não aprova automaticamente outros recortes da matriz.
+
+| Pergunta na última lista | Escolha | Decisão aprovada |
+|---|---|---|
+| 1 — Empresa | A | Ficha própria de empresa vinculada aos contatos atuais. |
+| 2 — Profundidade B2B | B | Um vínculo simples de empresa por contato, sem entidade Pessoa separada. |
+| 3 — Tags | A | Catálogo por organização para contatos, leads e conversas; remoção contextual e gestão global separadas. |
+| 4 — Forecast | A | Probabilidade por etapa e resumo ponderado simples. |
+| 5 — Financeiro | A | Valor do negócio e ganhos comerciais; comissão opcional continua a definir. |
+| 6 — Propostas | A | Proposta básica, modelos simples, versão enviada e PDF. |
+| 7 — Campanhas | B | Envio em lote agendado como módulo opcional. |
+| 8 — Prospecção | A | Organização de prospects e tarefas humanas. |
+| 9 — Módulos | A | Core pequeno e capacidades opcionais por cliente, sem catálogo público. |
+| 10 — Automações e roteiros | A | Regras existentes e roteiros curtos de coleta. |
+| 11 — Integrações | C | Google Calendar/Meet e Meta/Google Ads ficam fora da seleção atual. |
+| 12 — Banco externo (13 na lista original) | C | Sem banco externo por enquanto. |
+
+A pergunta original 12, sobre distribuição, foi resolvida pela [arquitetura da Fase 2.4](PRODUCT_DISTRIBUTION_ARCHITECTURE.md): código e releases únicos, VPS e projeto Supabase dedicados por cliente, gestão operacional central e ausência de branches permanentes por cliente. Essa decisão não equivale à escolha de uma instalação compartilhada entre clientes.
+
+Detalhes não abrangidos pelas alternativas continuam abertos, incluindo regras de comissão e regras operacionais do módulo de campanhas. As classificações e propostas anteriores permanecem como análise histórica; não significam que os recursos escolhidos já estejam implementados.
