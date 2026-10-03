@@ -67,6 +67,10 @@ const ANON_PERMITIDO: readonly Excecao[] = [];
  */
 const AUTHENTICATED_PERMITIDO: readonly Excecao[] = [
   {
+    fn: "fn_set_capability(uuid,text,boolean)",
+    razao: "PATCH app/api/v1/settings/capabilities/route.ts chama o client autenticado; RPC exige admin da organização, suporte de escrita e MFA, com namespace atômico. capabilities-local.test.ts prova isolamento A/B, agent/anon/service role negados e histórico preservado.",
+  },
+  {
     fn: "fn_reply_action(uuid,uuid,text,text,text,text)",
     razao:
       "POST app/api/v1/ai/replies/[id]/route.ts usa createClient da sessão. " +

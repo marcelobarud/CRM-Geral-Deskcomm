@@ -26,6 +26,8 @@ export const ApiErrorCodes = {
   forbidden: "forbidden",
   forbidden_role: "forbidden_role",
   forbidden_tenant: "forbidden_tenant",
+  capability_blocked: "capability_blocked",
+  capability_unavailable: "capability_unavailable",
   lgpd_anonymization_irreversible: "lgpd_anonymization_irreversible",
 
   // 404
