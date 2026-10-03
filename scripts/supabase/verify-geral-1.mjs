@@ -169,11 +169,16 @@ try {
       "isolamento A/B",
     );
   }
+  const anonymousRead = await anon.from("organizations").select("id").in("id", [orgA, orgB]);
+  // Helpers das policies não são executáveis por anon. A negação 42501
+  // também comprova ausência de acesso; outros erros continuam reprovando.
   insist(
-    requireResult(await anon.from("organizations").select("id").in("id", [orgA, orgB]), "anon")
-      .length === 0,
+    anonymousRead.error
+      ? anonymousRead.error.code === "42501" && anonymousRead.data === null
+      : Array.isArray(anonymousRead.data) && anonymousRead.data.length === 0,
     "anon isolado",
   );
+  done("REST: leitura própria, isolamento A/B e acesso anônimo negado");
   const template = requireResult(
     await a.client
       .from("message_templates")
