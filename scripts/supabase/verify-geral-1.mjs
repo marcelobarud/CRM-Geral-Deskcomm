@@ -1,3 +1,4 @@
+import { verifyReportingForecast } from "./verify-reporting-forecast.mjs";
 import { verifyB2BSimple } from "./verify-b2b-simple.mjs";
 import { verifyTagsFoundation } from "./verify-tags-foundation.mjs";
 /** Homologação destrutiva SOMENTE de fixtures desta execução no staging fixo.
@@ -43,9 +44,10 @@ let phase = "preflight",
   storageOwner,
   passed = false;
 const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
+const forecastSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Forecast";
 const b2bSuite = process.env.CRM_GERAL_VERIFY_SUITE === "B2B";
 const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
-const dir = b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const dir = forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -608,6 +610,10 @@ try {
   if (b2bSuite) {
     phase = "b2b-journey";
     b2bProof = await verifyB2BSimple({ admin, a, b, viewer, agent, anon, orgA, orgB, contact, desktop, mobile, app, dir, requireResult, insist, done });
+  }
+  if (forecastSuite) {
+    phase = "forecast-journey";
+    await verifyReportingForecast({ admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile, app, dir, requireResult, insist, done });
   }
   phase = "mfa";
   const factor = requireResult(
