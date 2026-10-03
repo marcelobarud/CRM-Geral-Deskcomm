@@ -1,5 +1,5 @@
 ﻿[CmdletBinding()]
-param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial')][string]$Suite='D2')
+param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags')][string]$Suite='D2')
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}
@@ -30,7 +30,7 @@ try{
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3000'
       & node (Join-Path $repo 'node_modules/next/dist/bin/next') dev -p 3000
     }
-    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2) ou .local-dev/bloco-b/result.json (Commercial).'}
+    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2) ou .local-dev/bloco-b/result.json (Commercial) ou .local-dev/bloco-c/result.json (Tags).'}
   }finally{Pop-Location}
 }finally{
   foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}

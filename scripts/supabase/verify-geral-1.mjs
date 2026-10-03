@@ -1,3 +1,4 @@
+import { verifyTagsFoundation } from "./verify-tags-foundation.mjs";
 /** Homologação destrutiva SOMENTE de fixtures desta execução no staging fixo.
  * Não grava senha, token, key, sessão do navegador ou payload de rede. */
 import { verifyCommercialJourney } from "./verify-commercial-journey.mjs";
@@ -41,7 +42,8 @@ let phase = "preflight",
   storageOwner,
   passed = false;
 const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
-const dir = commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
+const dir = tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -595,6 +597,11 @@ try {
       done,
     });
   }
+  let tagsProof;
+  if (tagsSuite) {
+    phase = "tags-journey";
+    tagsProof = await verifyTagsFoundation({ admin, a, b, viewer, agent, anon, orgA, orgB, contact, desktop, mobile, app, dir, requireResult, insist, done });
+  }
   phase = "mfa";
   const factor = requireResult(
     await a.client.auth.mfa.enroll({ factorType: "totp", friendlyName: `d2-${run}` }),
@@ -622,6 +629,10 @@ try {
     ).error,
     "MFA não comprovada bloqueada",
   );
+  if (tagsSuite) {
+    insist((await a.client.rpc("fn_crm_tag_manage", { p_org: orgA, p_action: "create", p_name: "Sessão AAL1 bloqueada" })).error?.code === "42501", "C MFA AAL1 catálogo bloqueado");
+    insist((await a.client.rpc("fn_crm_tag_assign", { p_org: orgA, p_kind: "contact", p_record: tagsProof.contact_id, p_tag: tagsProof.tag_id, p_assign: true })).error?.code === "42501", "C MFA AAL1 vínculo bloqueado");
+  }
   // Uma nova janela de TOTP evita rejeição de reuso do código anterior.
   await new Promise((r) => setTimeout(r, 31000 - (Date.now() % 30000)));
   requireResult(
@@ -639,6 +650,11 @@ try {
     }),
     "RPC AAL2",
   );
+  if (tagsSuite) {
+    requireResult(await a.client.rpc("fn_crm_tag_manage", { p_org: orgA, p_action: "create", p_name: "Sessão AAL2 fictícia" }), "C MFA AAL2 catálogo permitido");
+    requireResult(await a.client.rpc("fn_crm_tag_assign", { p_org: orgA, p_kind: "contact", p_record: tagsProof.contact_id, p_tag: tagsProof.tag_id, p_assign: true }), "C MFA AAL2 vínculo permitido");
+    done("Bloco C: MFA real AAL1 bloqueia catálogo/vínculo e AAL2 permite ambos");
+  }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
 } catch (error) {
