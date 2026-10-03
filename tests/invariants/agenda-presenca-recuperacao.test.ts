@@ -580,12 +580,16 @@ describe("presença e recuperação transacionais", () => {
       await c.query("select set_config('request.jwt.claims',$1,true)", [
         JSON.stringify({ sub: GOV_AGENT_A, role: "authenticated" }),
       ]);
-      await expect(
-        c.query(
+      const removed = await c.query(
           "delete from followup_enrollment_events where enrollment_id=$1 and idempotency_key='t:2'",
           [enr],
-        ),
-      ).rejects.toMatchObject({ code: "42501" });
+        );
+      // A policy DELETE ausente bloqueia antes do trigger: zero linhas, sem erro.
+      expect(removed.rowCount).toBe(0);
+      expect((await pool.query(
+        "select count(*)::int as n from followup_enrollment_events where enrollment_id=$1 and idempotency_key='t:2'",
+        [enr],
+      )).rows[0].n, "o evento interno precisa continuar intacto").toBe(1);
     } finally {
       await c.query("rollback");
       c.release();
