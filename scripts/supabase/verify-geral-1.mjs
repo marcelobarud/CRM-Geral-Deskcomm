@@ -1,3 +1,4 @@
+import { verifyProposals } from "./verify-proposals.mjs";
 import { verifyReportingForecast } from "./verify-reporting-forecast.mjs";
 import { verifyB2BSimple } from "./verify-b2b-simple.mjs";
 import { verifyTagsFoundation } from "./verify-tags-foundation.mjs";
@@ -44,10 +45,11 @@ let phase = "preflight",
   storageOwner,
   passed = false;
 const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
+const proposalsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Proposals";
 const forecastSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Forecast";
 const b2bSuite = process.env.CRM_GERAL_VERIFY_SUITE === "B2B";
 const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
-const dir = forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const dir = proposalsSuite ? ".local-dev/bloco-f" : forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -498,7 +500,7 @@ try {
     await page.getByLabel("Senha", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
     await page.waitForURL("**/app/settings/capabilities", { timeout: 120000 });
-    await page.getByRole("switch").waitFor();
+    await page.getByRole("switch", { name: "Respostas rápidas", exact: true }).waitFor();
     return { page, context };
   }
   const desktop = await login(a, { width: 1440, height: 900 });
@@ -524,7 +526,7 @@ try {
     });
   }
   await desktop.page.goto(`${app}/app/settings/capabilities`);
-  const toggle = desktop.page.getByRole("switch");
+  const toggle = desktop.page.getByRole("switch", { name: "Respostas rápidas", exact: true });
   await toggle.waitFor();
   await toggle.focus();
   insist(await toggle.evaluate((el) => document.activeElement === el), "foco");
@@ -561,7 +563,7 @@ try {
     "API enabled",
   );
   const mobile = await login(viewer, { width: 390, height: 844 });
-  insist(await mobile.page.getByRole("switch").isDisabled(), "controle viewer");
+  insist(await mobile.page.getByRole("switch", { name: "Respostas rápidas", exact: true }).isDisabled(), "controle viewer");
   insist(
     (
       await mobile.context.request.patch(`${app}/api/v1/settings/capabilities`, {
@@ -611,6 +613,10 @@ try {
     phase = "b2b-journey";
     b2bProof = await verifyB2BSimple({ admin, a, b, viewer, agent, anon, orgA, orgB, contact, desktop, mobile, app, dir, requireResult, insist, done });
   }
+  if (proposalsSuite) {
+    phase = "proposals-journey";
+    await verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult,insist,done});
+  }
   if (forecastSuite) {
     phase = "forecast-journey";
     await verifyReportingForecast({ admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile, app, dir, requireResult, insist, done });
@@ -650,6 +656,8 @@ try {
     insist((await a.client.rpc("fn_crm_company_manage",{p_org:orgA,p_action:"create",p_data:{name:"AAL1 bloqueada"}})).error?.code==="42501","D MFA AAL1 catálogo bloqueado");
     insist((await a.client.from("contacts").update({company_id:b2bProof.company_id}).eq("organization_id",orgA).eq("id",b2bProof.contact_id)).error?.code==="42501","D MFA AAL1 vínculo bloqueado");
   }
+  if (proposalsSuite) insist((await a.client.rpc('fn_proposal_command',{p_org:orgA,p_action:'create',p_data:{title:'MFA fictícia F',currency:'BRL',items:[{description:'Fictício',quantity:'1',unit_price_cents:'1'}]},p_request:randomUUID()})).error?.code==='42501','F MFA AAL1 mutação bloqueada');
+  if (proposalsSuite) insist((await a.client.rpc("fn_set_capability",{p_org:orgA,p_capability:"proposals",p_enabled:true})).error?.code==="42501","F MFA AAL1 capability bloqueada");
   // Uma nova janela de TOTP evita rejeição de reuso do código anterior.
   await new Promise((r) => setTimeout(r, 31000 - (Date.now() % 30000)));
   requireResult(
@@ -676,6 +684,11 @@ try {
     requireResult(await a.client.rpc("fn_crm_company_manage",{p_org:orgA,p_action:"create",p_data:{name:"Empresa fictícia AAL2"}}),"D MFA AAL2 catálogo");
     requireResult(await a.client.from("contacts").update({company_id:b2bProof.company_id}).eq("organization_id",orgA).eq("id",b2bProof.contact_id).select("id").single(),"D MFA AAL2 vínculo");
     done("Bloco D: MFA real AAL1 bloqueia catálogo/vínculo e AAL2 permite ambos");
+  }
+  if (proposalsSuite) {
+    requireResult(await a.client.rpc("fn_set_capability",{p_org:orgA,p_capability:"proposals",p_enabled:true}),"F MFA AAL2 capability permitida");
+    requireResult(await a.client.rpc('fn_proposal_command',{p_org:orgA,p_action:'create',p_data:{title:'MFA fictícia F',currency:'BRL',items:[{description:'Fictício',quantity:'1',unit_price_cents:'1'}]},p_request:randomUUID()}),'F MFA AAL2 mutação permitida');
+    done("Bloco F: MFA real AAL1 bloqueia capability/mutação e AAL2 permite ambos");
   }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
