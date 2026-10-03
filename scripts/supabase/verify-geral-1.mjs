@@ -383,6 +383,11 @@ try {
     seenB = 0;
   async function subscribe(client, name, filter, receive) {
     lastCheck = "subscription Realtime";
+    // O primeiro join precisa aguardar o JWT, como no bootstrap canônico
+    // de lib/supabase/browser.ts; SUBSCRIBED sozinho não comprova identidade.
+    const refreshed = requireResult(await client.auth.refreshSession(), "JWT Realtime");
+    insist(refreshed.session?.access_token, "sessão Realtime ausente");
+    await client.realtime.setAuth(refreshed.session.access_token);
     const channel = client
       .channel(name)
       .on(
@@ -415,12 +420,15 @@ try {
       .from("crm_leads")
       .update({ title: "Oportunidade fictícia D2 atualizada" })
       .eq("organization_id", orgA)
-      .eq("id", lead),
+      .eq("id", lead)
+      .select("id")
+      .single(),
     "atualização Realtime",
   );
   for (let i = 0; i < 40 && !seenA; i++) await new Promise((r) => setTimeout(r, 250));
   await new Promise((r) => setTimeout(r, 1500));
-  insist(seenA > 0 && seenB === 0, "Realtime isolado A/B");
+  insist(seenA > 0, "Realtime evento autorizado A");
+  insist(seenB === 0, "Realtime isolamento B");
   await a.client.removeChannel(ca);
   await b.client.removeChannel(cb);
   done("Realtime real: evento crm_leads e negação cross-tenant");
