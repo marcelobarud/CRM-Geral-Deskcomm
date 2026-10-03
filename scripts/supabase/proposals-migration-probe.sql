@@ -1,0 +1,26 @@
+begin;
+do $probe$ declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); p jsonb; v jsonb; r jsonb; request uuid:=gen_random_uuid(); contact uuid:=gen_random_uuid(); linked jsonb; begin
+ insert into public.organizations(id,slug,legal_name,display_name) values(a,'proposal-probe-'||a,'Fictícia A','Fictícia A'),(b,'proposal-probe-'||b,'Fictícia B','Fictícia B');
+ insert into auth.users(id,email,raw_user_meta_data) values(actor,'proposal-probe-'||actor||'@example.invalid','{}');
+ insert into public.user_organizations(user_id,organization_id,role,accepted_at) values(actor,a,'admin',now());
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
+ if public.fn_capability_enabled(a,'proposals') then raise exception 'default_enabled'; end if;
+ perform public.fn_set_capability(a,'proposals',true);
+ p:=public.fn_proposal_command(a,'create',null,'{"title":"Proposta fictícia","currency":"BRL","items":[{"description":"Meio centavo","quantity":"0.5","unit_price_cents":"1"},{"description":"Serviço","quantity":"2","unit_price_cents":"10000"}]}',request);
+ if p->>'total_cents'<>'20001' then raise exception 'math'; end if;
+ r:=public.fn_proposal_command(a,'create',null,'{"title":"Proposta fictícia","currency":"BRL","items":[{"description":"Meio centavo","quantity":"0.5","unit_price_cents":"1"},{"description":"Serviço","quantity":"2","unit_price_cents":"10000"}]}',request);
+ if r->>'id'<>p->>'id' then raise exception 'idempotency'; end if;
+ v:=public.fn_proposal_command(a,'prepare',(p->>'id')::uuid,'{"recipient":"Fictício","channel":"other","brand":{"nome":"Marca fictícia"}}',gen_random_uuid());
+ if v->'snapshot'->>'total_cents'<>'20001' then raise exception 'snapshot'; end if;
+ r:=public.fn_proposal_command(a,'update',(p->>'id')::uuid,'{"title":"Rascunho novo","currency":"BRL","expected_revision":1,"items":[{"description":"Outro","quantity":"1","unit_price_cents":"99"}]}',gen_random_uuid());
+ if (select snapshot->>'title' from public.crm_proposal_versions where id=(v->>'id')::uuid)<>'Proposta fictícia' then raise exception 'historical_mutated'; end if;
+ begin perform public.fn_proposal_command(b,'create',null,'{}',gen_random_uuid());raise exception 'cross_tenant_allowed';exception when insufficient_privilege then null;end;
+ insert into public.contacts(id,organization_id,name) values(contact,a,'Contato fictício probe');
+ linked:=public.fn_proposal_command(a,'create',null,jsonb_build_object('title','Proposta vinculada','currency','BRL','contact_id',contact,'items',jsonb_build_array(jsonb_build_object('description','Serviço','quantity','1','unit_price_cents','1'))),gen_random_uuid());
+ if not exists(select 1 from public.api_audit_log where organization_id=a and resource_id=contact and metadata->>'proposal_id'=linked->>'id' and metadata->>'reason'='Proposta criada') then raise exception 'timeline_missing'; end if;
+ perform public.fn_set_capability(a,'proposals',false);
+ begin perform public.fn_proposal_command(a,'archive',(p->>'id')::uuid,'{}',gen_random_uuid());raise exception 'disabled_allowed';exception when insufficient_privilege then null;end;
+ if not exists(select 1 from public.crm_proposal_versions where id=(v->>'id')::uuid) then raise exception 'history_lost'; end if;
+end $probe$;
+rollback;
+select true as proposal_probe_passed;

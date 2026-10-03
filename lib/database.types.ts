@@ -4332,6 +4332,241 @@ export type Database = {
           },
         ]
       }
+      crm_proposal_items: {
+        Row: {
+          description: string
+          id: string
+          organization_id: string
+          position: number
+          product_id: string | null
+          proposal_id: string
+          quantity: number
+          unit_price_cents: number
+        }
+        Insert: {
+          description: string
+          id?: string
+          organization_id: string
+          position: number
+          product_id?: string | null
+          proposal_id: string
+          quantity: number
+          unit_price_cents: number
+        }
+        Update: {
+          description?: string
+          id?: string
+          organization_id?: string
+          position?: number
+          product_id?: string | null
+          proposal_id?: string
+          quantity?: number
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_proposal_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposal_items_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_proposal_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_proposal_templates: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_proposal_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_proposal_versions: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          draft_revision: number
+          id: string
+          organization_id: string
+          pdf_path: string
+          pdf_sha256: string | null
+          proposal_id: string
+          recipient: string
+          request_id: string
+          sent_at: string | null
+          snapshot: Json
+          state: string
+          total_cents: number
+          version_number: number
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          draft_revision: number
+          id?: string
+          organization_id: string
+          pdf_path: string
+          pdf_sha256?: string | null
+          proposal_id: string
+          recipient: string
+          request_id: string
+          sent_at?: string | null
+          snapshot: Json
+          state?: string
+          total_cents: number
+          version_number: number
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          draft_revision?: number
+          id?: string
+          organization_id?: string
+          pdf_path?: string
+          pdf_sha256?: string | null
+          proposal_id?: string
+          recipient?: string
+          request_id?: string
+          sent_at?: string | null
+          snapshot?: Json
+          state?: string
+          total_cents?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_proposal_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposal_versions_organization_id_proposal_id_fkey"
+            columns: ["organization_id", "proposal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_proposals"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      crm_proposals: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          draft_revision: number
+          id: string
+          lead_id: string | null
+          notes: string
+          organization_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          draft_revision?: number
+          id?: string
+          lead_id?: string | null
+          notes?: string
+          organization_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          draft_revision?: number
+          id?: string
+          lead_id?: string | null
+          notes?: string
+          organization_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_proposals_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_proposals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_stages: {
         Row: {
           agent_stage_hint: string | null
@@ -9291,6 +9526,20 @@ export type Database = {
       fn_podar_fila_de_jobs: {
         Args: { p_limite?: number; p_retencao_dias?: number }
         Returns: number
+      }
+      fn_proposal_access: {
+        Args: { p_org: string; p_proposal: string }
+        Returns: boolean
+      }
+      fn_proposal_command: {
+        Args: {
+          p_action: string
+          p_data?: Json
+          p_org: string
+          p_proposal?: string
+          p_request?: string
+        }
+        Returns: Json
       }
       fn_publish_ai_agent_version:
         | {

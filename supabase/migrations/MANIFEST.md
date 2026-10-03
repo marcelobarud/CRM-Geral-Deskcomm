@@ -317,3 +317,14 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261003212000` | `0253_crm_geral_b2b_idempotency` | Reusa ledger existente para criação idempotente; auditoria não bloqueia vínculo se falhar. |
 | `20261003213000` | `0254_crm_geral_b2b_receipts_guard` | Protege namespace do receipt B2B contra escrita direta nos grants legados do ledger, preservando outros endpoints e cascata do tenant. |
 | `20261003220000` | `0255_crm_geral_reporting_forecast` | Probabilidade nullable por etapa e read model comercial SECURITY INVOKER, cents exatos, moedas isoladas e períodos explícitos. |
+| `20261004000000` | `0256_crm_geral_proposals` | Módulo opcional de propostas, itens, templates, versões imutáveis, command idempotente, RLS e Storage privado. |
+| `20261004001000` | `0257_proposal_templates_retry` | Edição de modelo com RBAC, snapshot de autoria e retry independente da marca atual. |
+| `20261004002000` | `0258_proposal_prepared_pdf` | Prontidão e hash do PDF preparado sem registrar envio; retry preservado. |
+| `20261004003000` | `0259_proposals_fk_indexes` | Índices de FKs do módulo e desvinculação de ator excluído preservando snapshot. |
+| `20261004004000` | `0260_proposals_commercial_history` | Timeline comercial com motivo, ator humano e contato derivado da oportunidade. |
+| `20261004005000` | `0261_proposals_history_actor` | Corrige ator para o valor canônico user aceito pela timeline comercial. |
+| `20261004006000` | `0262_proposals_contact_history` | Projeta também propostas diretamente vinculadas a contato na timeline existente. |
+| `20261004007000` | `0263_proposals_contact_activity_guard` | Valida atividade sem oportunidade pelo contato, preservando isolamento de organização. |
+| `20261004008000` | `0264_proposals_contact_projection` | Histórico direto de contato pela projeção de auditoria existente; preserva lead_id obrigatório. |
+| `20261004009000` | `0265_proposals_receipts_guard` | Impede falsificação ou remoção direta de receipts de propostas no ledger compartilhado. |
+| `20261004010000` | `0266_proposals_receipts_syntax` | Corrige expressão LIKE do guard de receipts, confirmada pelo probe transacional. |
