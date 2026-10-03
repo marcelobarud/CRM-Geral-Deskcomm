@@ -12,7 +12,7 @@ export async function verifyReportingForecast({admin,a,b,viewer,agent,anon,orgA,
    {name:"Etapa E A",slug:"forecast-a",position:1},{name:"Etapa E B",slug:"forecast-b",position:2},{name:"Etapa E C",slug:"forecast-c",position:3},
    {name:"Sem configuração E",slug:"forecast-x",position:4},{name:"Zero E",slug:"forecast-zero",position:5,probability_percent:0},{name:"Cem E",slug:"forecast-cem",position:6,probability_percent:100},
    {name:"Ganho E",slug:"forecast-won",position:7,is_won:true},{name:"Perda E",slug:"forecast-lost",position:8,is_lost:true},
-  ].map(s=>({...s,organization_id:orgA,pipeline_id:pipe}))).select("id,name,probability_percent"),"E etapas");
+  ].map(s=>({is_won:false,is_lost:false,probability_percent:null,...s,organization_id:orgA,pipeline_id:pipe}))).select("id,name,probability_percent"),"E etapas");
   const sid=(name)=>stages.find(s=>s.name===name).id;
   insist(stages.filter(s=>["Etapa E A","Etapa E B","Etapa E C","Sem configuração E"].includes(s.name)).every(s=>s.probability_percent===null),"E etapas nascem sem probabilidade");
   await page.setViewportSize({width:1440,height:900});

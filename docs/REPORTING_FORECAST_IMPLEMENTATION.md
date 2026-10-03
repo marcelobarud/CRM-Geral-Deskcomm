@@ -147,6 +147,13 @@ Kanban → redução do forecast/entrada no resultado; 1440×900 e 390×844, vie
 Limpeza final e conferência independente dos IDs do journal são obrigatórias.
 Ainda não executar o critério de saída como se essa jornada já tivesse passado.
 
+Primeira execução real (2026-10-03): base D2 passou; Forecast interrompido na
+criação das etapas fictícias, código 23502. O lote misturava flags de ganho/perda
+omitidas e explícitas; campos ausentes no lote viravam null, incompatível com
+NOT NULL. Corrigido somente o harness com is_won/is_lost=false e probabilidade
+null explícitos antes dos overrides. O relatório confirmou fixtures_cleaned=true.
+Jornada Forecast e conferência independente continuam pendentes de nova execução.
+
 ## Gaps e Git
 
 P0: nenhum identificado nas provas concluídas; aceite completo ainda pendente.
