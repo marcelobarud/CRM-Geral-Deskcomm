@@ -3,6 +3,8 @@ import { traduzir } from "@/lib/i18n/dicionario";
 import { ROLE_RANK } from "@/lib/auth/types";
 
 import { MetricsClient } from "./_components/MetricsClient";
+import { CommercialReportPanel } from "@/components/commercial/CommercialReportPanel";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,8 @@ export default async function MetricsPage() {
   // padrão vive em `lib/auth/server.ts`), sem reler o `locale` cru.
   const idioma = user.idioma;
   const t = (texto: string) => traduzir(texto, idioma);
+  const db = await createClient();
+  const pipelines = activeOrg ? await db.from("crm_pipelines").select("id,name").eq("organization_id",activeOrg.orgId).eq("is_archived",false).order("position") : null;
 
   return (
     <div className="flex h-full flex-col gap-6 p-6">
@@ -28,6 +32,7 @@ export default async function MetricsPage() {
         </p>
       </header>
 
+      <CommercialReportPanel pipelines={pipelines?.data??[]} loadError={!!pipelines?.error}/>
       <MetricsClient canCompare={canCompare} currentUserId={user.id} />
     </div>
   );
