@@ -188,6 +188,13 @@ envio por teclado, resposta HTTP e exibição do vínculo, e captura somente
 a tela fictícia em b2b-failure.png quando houver falha. Nenhuma mudança
 funcional foi feita por hipótese; próxima execução deve localizar a causa.
 
+Segunda tentativa: timeout no seletor de empresa; fixtures_cleaned=true.
+A captura confirmou que o campo estava presente. Reprodução isolada no Chrome
+confirmou getByLabel exato com zero matches no label que contém opções, enquanto
+getByRole combobox localizou e selecionou a opção. O harness foi corrigido nos
+dois vínculos (desktop/mobile), preservando a interação real e o aceite de UI.
+Homologação B2B completa continua pendente.
+
 P0: nenhum identificado nas provas concluídas; não constitui aceite final.
 P1: Auth/JWT/MFA reais, jornada/inspeção 1440×900/390×844 e cleanup B2B pendentes.
 P2: dívidas preexistentes da suíte global e branding público/funil histórico,

@@ -50,7 +50,7 @@ export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,con
  await page.goto(app+"/app/contacts/"+contact,{timeout:120000});
  const section=page.getByRole("region",{name:"Empresa",exact:true});
  insist(true,"D UI contato: seletor de empresa disponível");
- await section.getByLabel("Selecionar empresa",{exact:true}).selectOption(one);
+ await section.getByRole("combobox",{name:/^Selecionar empresa/}).selectOption(one);
  insist(true,"D UI contato: envio do vínculo por teclado");
  await section.getByRole("button",{name:"Vincular empresa",exact:true}).focus();
  const [linked]=await Promise.all([
@@ -91,7 +91,7 @@ export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,con
  await page.getByRole("button",{name:"Editar empresa",exact:true}).click();await shot("form-390");await page.getByRole("button",{name:"Cancelar",exact:true}).click();
  await page.goto(app+"/app/companies",{timeout:120000});await page.getByLabel("Buscar empresas",{exact:true}).fill("renomeada");await page.getByRole("link",{name:"Empresa fictícia B2B renomeada",exact:true}).waitFor();await shot("list-390");
  await page.goto(app+"/app/contacts/"+contact,{timeout:120000});
- await section.getByLabel("Selecionar empresa",{exact:true}).selectOption(two);await section.getByRole("button",{name:"Vincular empresa",exact:true}).click();
+ await section.getByRole("combobox",{name:/^Selecionar empresa/}).selectOption(two);await section.getByRole("button",{name:"Vincular empresa",exact:true}).click();
  await section.getByRole("link",{name:"Empresa fictícia B2B alternativa",exact:true}).waitFor();await shot("contact-switch-390");
  await page.goto(dossier,{timeout:120000});await page.getByRole("link",{name:"Empresa fictícia B2B alternativa",exact:true}).waitFor();await shot("lead-390");
  await page.goto(app+"/app/contacts/"+contact,{timeout:120000});await section.getByRole("button",{name:"Remover vínculo",exact:true}).click();await section.getByText("Nenhuma empresa vinculada.",{exact:true}).waitFor();await shot("contact-unlink-390");
