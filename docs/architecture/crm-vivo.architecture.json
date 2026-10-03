@@ -17,6 +17,10 @@
   ],
   "mainPath": ["leadstate", "atividades", "slot", "decisao", "fila", "leads"],
   "nodes": [
+    {"id":"proposalcap","lane":"humano","col":0,"type":"frontend","label":"Capability Propostas","sublabel":"default desligado, saúde do Storage e RBAC"},
+    {"id":"proposalui","lane":"humano","col":1,"type":"frontend","label":"Propostas: rascunho e histórico","sublabel":"contexto comercial, itens e modelos simples"},
+    {"id":"proposalversion","lane":"negocio","col":2,"type":"service","label":"Versão imutável","sublabel":"snapshot, ledger e registro de envio"},
+    {"id":"proposalpdf","lane":"fora","col":3,"type":"service","label":"PDF privado por versão","sublabel":"sem sobrescrita; URL autorizada de 60s"},
     {"id":"forecastsettings","lane":"humano","col":1,"type":"frontend","label":"Configuração de etapas","sublabel":"probability_percent nullable, manager+"},
     {"id":"forecastread","lane":"negocio","col":2,"type":"service","label":"fn_crm_commercial_report","sublabel":"SECURITY INVOKER: cents, moeda e período"},
     {"id":"forecastui","lane":"humano","col":2,"type":"frontend","label":"/app/metrics: comercial","sublabel":"pipeline, forecast, ganhos/perdas e incompletude"},
@@ -58,6 +62,13 @@
     {"id":"companyhistory","lane":"barramento","col":2,"type":"api","label":"contacts/:id/timeline","sublabel":"projeta audit contact.company_changed"}
   ],
   "edges": [
+    {"from":"proposalcap","to":"proposalui","label":"UI/API prontas"},
+    {"from":"leads","to":"proposalui","label":"contexto comercial"},
+    {"from":"proposalui","to":"proposalversion","label":"command idempotente"},
+    {"from":"proposalversion","to":"proposalpdf","label":"snapshot específico"},
+    {"from":"proposalpdf","to":"proposalversion","label":"confirma arquivo antes de sent"},
+    {"from":"proposalversion","to":"atividades","label":"timeline comercial"},
+    {"from":"proposalversion","to":"proposalui","label":"histórico preservado"},
     {"id":"forecast-config-stage","from":"forecastsettings","to":"stages","label":"probabilidade inteira 0..100, autoria/audit"},
     {"id":"forecast-stage-read","from":"stages","to":"forecastread","label":"probabilidade atual, sem IA"},
     {"id":"forecast-lead-read","from":"leads","to":"forecastread","label":"abertos; closed_at para resultado comercial"},

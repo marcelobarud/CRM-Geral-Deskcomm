@@ -248,3 +248,10 @@ Admin cria/edita/arquiva; agent usa o vínculo; viewer lê. Sem Pessoa ou FK dir
 Desempenho existente → Relatório comercial → filtros/período → totais e distribuições por moeda.
 Configurar probabilidades → Configurações/Funis → edição da etapa (manager+).
 Agent lê oportunidades visíveis via RLS; viewer recebe ausência explícita de permissão.
+
+## CRM Geral — Propostas / Bloco F
+
+CRM → Propostas (agent+, capability) → rascunho → itens/modelo → PDF preparado
+→ registrar versão como enviada → histórico e PDF autorizado.
+Oportunidade → Criar proposta; contexto do contato → propostas relacionadas.
+Configurações/Módulos habilita; desligamento retira efeitos e preserva histórico.

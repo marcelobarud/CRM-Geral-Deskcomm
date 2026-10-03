@@ -2023,3 +2023,11 @@ Suíte `start-geral-1.ps1 -Prompt -Suite Forecast`, Geral 1, fixtures JWT A/B.
 Configuração de probabilidades → cenário monetário manual/multimoeda → movimento → ganho sai do forecast e entra no resultado comercial.
 Estados de incompletude, cents/bigint, período, viewer/agent/own-scope e desktop/mobile/teclado.
 PASS no Geral 1 em 2026-10-03: run `58df9703-b1f2-4494-8501-bc3f0adb5583`, JWT/UI desktop/mobile, teclado, movimento/ganho e MFA reais. Limpeza independente: zero organizações/leads/funis/etapas/usuários Auth/sessões. Limites em `docs/REPORTING_FORECAST_IMPLEMENTATION.md`.
+
+## CRM Geral — Propostas / Bloco F
+
+Suíte start-geral-1.ps1 -Prompt -Suite Proposals, Geral 1, JWT A/B.
+Preparada: habilitar → oportunidade/contato/empresa → catálogo/itens/modelo →
+PDF/v1 → mudança de contexto/modelo/produto → v2 → v1 intacta → desligar →
+histórico; Storage/signed URL A/B, desktop/mobile, teclado e MFA.
+Homologação real pendente; provas SQL/rollback e testes focados concluídos.
