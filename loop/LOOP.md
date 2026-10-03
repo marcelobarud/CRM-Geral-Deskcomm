@@ -1,3 +1,7 @@
+
+
+> Protocolo especializado herdado do mantenedor Deskcomm, aplicável apenas quando esse fluxo for explicitamente invocado. Não governa desenvolvimento interno do CRM Geral. AGENTS.md do checkout prevalece; origin/main nos exemplos assume o repositório original verificado. Memórias externas/grafos ausentes são opcionais. Publicação e mensagens exigem autorização da tarefa.
+
 # LOOP.md — prompt canônico da sessão do gov-loop — DeskcommCRM (Governança de Atendimento)
 
 > Você é UMA sessão DESCARTÁVEL do loop de construção do épico de governança de
@@ -235,7 +239,7 @@ elegível — só congeladas/human_input):
 - **Nunca confie no próprio contexto como estado.** Se importa, está em git /
   features.json / progress.md / inbox. Se não está, não aconteceu.
 - **Nunca `git push`.** Push só existe no ritual de virada de fase (CHECKPOINT.md).
-  E não é só instrução: o hook `loop/hooks/pre-push` recusa qualquer push sem
+  E não é só instrução: o hook `loop/hooks/pre-push` recusa push para main/master sem
   `DESKCOMM_GOV_PHASE_MERGE=1` — variável que só o ritual de virada exporta.
 - **Nunca edite acceptance/testes pra passar.** Teste incômodo = ou o código está
   errado, ou a feature está mal-escrita — o segundo caso vai pra inbox, não pro

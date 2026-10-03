@@ -1,3 +1,7 @@
+
+
+> Receita histórica/especializada do fluxo Deskcomm upstream. AGENTS.md do CRM Geral prevalece. Origin/main nos exemplos assume checkout dedicado cujo origin é o repositório original; não execute esses rituais no fork interno. Revalide comandos, dependências e provas no destino autorizado.
+
 # Rodar uma spec de tela na sua máquina — a receita do CI, passo a passo
 
 O CI (`.github/workflows/e2e.yml`) sobe um Supabase local, aplica o `baseline.sql` (o mesmo que o

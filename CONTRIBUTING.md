@@ -1,3 +1,5 @@
+> No CRM Geral, desenvolvimento interno segue AGENTS.md, com pnpm e PostgreSQL local. O procedimento abaixo é do fluxo original de contribuição Deskcomm upstream e só se aplica quando esse destino for explicitamente pedido e verificado. Origin/main nos exemplos históricos significa o checkout dedicado original, não a main deste fork. Não arme hooks nem envie mensagens como ritual de um commit interno. Eventual dispensa de execução por contribuidor externo muda quem produz a prova, não o critério de aceite: UI e schema continuam exigindo validação pertinente antes de declarar concluído.
+
 # Contributing — DeskcommCRM
 
 ## Antes de começar

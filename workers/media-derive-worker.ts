@@ -155,9 +155,14 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
     const deps = buildDeriveDeps(llm, openaiKey, row.organization_id, admin);
 
     const text = await deriveMediaText(msg.type, buffer, msg.media_mime ?? "application/octet-stream", deps);
-    await admin.from("messages")
+    const { data: written, error: writeError } = await admin.from("messages")
       .update({ media_derived_text: text, media_derived_status: "ready" })
-      .eq("id", msg.id).eq("organization_id", msg.organization_id);
+      .eq("id", msg.id).eq("organization_id", msg.organization_id)
+      // A redação zera o caminho na mesma transação; também funciona com body NULL.
+      .eq("media_storage_path", msg.media_storage_path)
+      .select("id");
+    if (writeError) return { consumer_key, status: "error", detail: "media_derive_write_failed" };
+    if (!written?.length) return { consumer_key, status: "skipped", detail: "message_redacted" };
     return { consumer_key, status: "ok" };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);

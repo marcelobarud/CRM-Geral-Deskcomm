@@ -60,7 +60,12 @@ export function ipEhEspecial(ip: string): boolean {
   }
 
   if (isIPv6(ip)) {
-    const normal = ip.toLowerCase();
+    const normal = new URL(`http://[${ip}]/`).hostname.slice(1, -1).toLowerCase();
+    // Canonicalização evita formas expandidas de loopback, mapped e link-local.
+    // Só global unicast 2000::/3; mecanismos de transição/documentação ficam fora.
+    if (!/^[23][0-9a-f]{3}:/.test(normal)) return true;
+    if (/^2001:(?:[0-1]?[0-9a-f]{1,2}):/.test(normal)) return true;
+    if (normal.startsWith("2002:") || normal.startsWith("3fff:")) return true;
     // IPv4-mapped (::ffff:127.0.0.1) esconde um IPv4 — decide pelo IPv4 embutido.
     const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(normal);
     if (mapped?.[1]) return ipEhEspecial(mapped[1]);

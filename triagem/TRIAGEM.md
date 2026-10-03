@@ -1,3 +1,7 @@
+
+
+> Protocolo especializado herdado do mantenedor Deskcomm, aplicável apenas quando esse fluxo for explicitamente invocado. Não governa desenvolvimento interno do CRM Geral. AGENTS.md do checkout prevalece; origin/main nos exemplos assume o repositório original verificado. Memórias externas/grafos ausentes são opcionais. Publicação e mensagens exigem autorização da tarefa.
+
 # TRIAGEM.md — o procedimento de triagem de PR
 
 Este arquivo é o procedimento inteiro. O comando `/triagem-de-pr` é só a porta.

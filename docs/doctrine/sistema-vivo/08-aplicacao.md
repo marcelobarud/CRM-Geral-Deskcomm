@@ -129,6 +129,6 @@ Doutrina morre de três jeitos, e vale reconhecê-los cedo:
 | Forma da cadeia de envio | Ordem, tamanho, versão e unicidade dos gates críticos |
 | Isolamento entre organizações | Nenhum vazamento de dado entre inquilinos |
 
-**Ferramentas de orientação antes de implementar:** o grafo determinístico do repositório (`graphify-out/`) para descobrir de quem a peça recebe e quem ela deve alimentar; os diagramas curados (`docs/architecture/`) como mapa vivo, cuja fonte da verdade são os arquivos de dados, não as imagens.
+**Ferramentas de orientação antes de implementar:** leitura direta das fontes e, opcionalmente, o grafo determinístico do repositório (graphify-out, se presente e atualizado) para descobrir de quem a peça recebe e quem ela deve alimentar; os diagramas curados (`docs/architecture/`) como mapa vivo, cuja fonte da verdade são os arquivos de dados, não as imagens.
 
 **Doutrinas irmãs que não são substituídas por esta:** a de schema e migrações (`CLAUDE.md`), a de restrição de canal (`../restricao-de-canal.md`) e a de separação entre fala e operação (`../separacao-fala-e-operacao.md`). Este manual trata de **conectividade e vida**; as outras tratam de correção em eixos específicos. Rode os dois.

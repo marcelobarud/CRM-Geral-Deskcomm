@@ -56,6 +56,7 @@ export interface MessageRow {
   type: string;
   status: string;
   body: string | null;
+  media_derived_text?: string | null;
   has_media: boolean;
   sent_at: string | null;
   created_at: string;
@@ -249,6 +250,11 @@ export interface ExportPayload {
    * próprio cascade.
    */
   voice_calls: VoiceCallRow[];
+  /** Conteúdo pessoal já existente no fork, entregue também no data.json. */
+  personal_context?: {
+    lead_checkpoints: unknown[]; lead_notes: unknown[]; lead_state: unknown[];
+    ai_agent_runs: unknown[]; conversation_notes: unknown[];
+  };
   reply_drafts?: Array<{
     id: string;
     status: string;
@@ -453,7 +459,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
 
     const { data, error } = await admin
       .from("messages")
-      .select("id, conversation_id, direction, type, status, body, media_url, sent_at, created_at")
+      .select("id, conversation_id, direction, type, status, body, media_url, media_derived_text, sent_at, created_at")
       .eq("organization_id", organizationId)
       .eq("contact_id", contactId)
       .order("created_at", { ascending: false })
@@ -471,6 +477,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
         type: m.type,
         status: m.status,
         body: m.body,
+        media_derived_text: m.media_derived_text,
         has_media: Boolean(m.media_url),
         sent_at: m.sent_at,
         created_at: m.created_at,
@@ -783,6 +790,30 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     }
   }
 
+  const personal_context: NonNullable<ExportPayload["personal_context"]> = {
+    lead_checkpoints: [], lead_notes: [], lead_state: [], ai_agent_runs: [], conversation_notes: [],
+  };
+  if (contactId) {
+    const queries = [
+      admin.from("lead_checkpoints").select("id,rolling_summary,commitments,objections,next_action,declaracao,created_at").eq("organization_id", organizationId).eq("contact_id", contactId).limit(500),
+      admin.from("lead_notes").select("id,headline,body,created_at").eq("organization_id", organizationId).eq("contact_id", contactId).limit(500),
+      admin.from("lead_state").select("id,next_action,qualification,updated_at").eq("organization_id", organizationId).eq("contact_id", contactId).limit(500),
+      admin.from("ai_agent_runs").select("id,tool_calls,error_message,created_at").eq("organization_id", organizationId).eq("contact_id", contactId).limit(500),
+    ];
+    const results = await Promise.all(queries);
+    for (const result of results) if (result.error) throw new Error("Não foi possível coletar o contexto pessoal completo.");
+    personal_context.lead_checkpoints = results[0]?.data ?? [];
+    personal_context.lead_notes = results[1]?.data ?? [];
+    personal_context.lead_state = results[2]?.data ?? [];
+    personal_context.ai_agent_runs = results[3]?.data ?? [];
+    if (conversations.length > 0) {
+      const { data, error } = await admin.from("conversation_notes").select("id,conversation_id,body,created_at")
+        .eq("organization_id", organizationId).in("conversation_id", conversations.map(c => c.id)).limit(500);
+      if (error) throw new Error("Não foi possível coletar as notas do titular.");
+      personal_context.conversation_notes = data ?? [];
+    }
+  }
+
   return {
     request_id: requestId,
     organization_id: organizationId,
@@ -807,6 +838,7 @@ export async function collectExportData(args: CollectArgs): Promise<ExportPayloa
     meeting_deliveries,
     appointment_notices,
     voice_calls,
+    personal_context,
   };
 }
 

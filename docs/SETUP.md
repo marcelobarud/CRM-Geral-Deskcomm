@@ -1,3 +1,7 @@
+
+
+> Escopo: receita de serviços da distribuição Supabase original. Para desenvolver no CRM Geral, siga [LOCAL_POSTGRES_SETUP.md](LOCAL_POSTGRES_SETUP.md); Supabase Cloud não é requisito local. Valores, planos e passos abaixo são contexto a revalidar, não garantias atuais. AGENTS.md prevalece para segurança e segredos.
+
 # Guia de Setup — DeskcommCRM
 
 > **Pra quem é este doc?** Você acabou de clonar o repo, copiou `.env.example` pra `.env.local`, abriu o arquivo e bateu o desespero: "o que é cada uma dessas chaves e onde eu pego?". Este guia resolve isso. Sem pular etapas, sem assumir que você já configurou nada antes.
@@ -32,7 +36,7 @@
 **O que você precisa ter instalado:**
 - **Node.js 22** — recomendamos via [nvm](https://github.com/nvm-sh/nvm). No repo, rode `nvm use` e ele puxa a versão certa. A suíte `pnpm test:db` exige Node 22+: os testes instanciam o cliente do Supabase, que precisa do `WebSocket` global (nativo só a partir do 22).
 - **Docker Desktop** — pra rodar o WAHA local. [Download](https://www.docker.com/products/docker-desktop/).
-- **pnpm** — `npm install -g pnpm` (gerenciador de pacotes que usamos).
+- **pnpm** — Corepack com a versão pnpm declarada em `package.json` (gerenciador de pacotes que usamos).
 - **Git** — você já tem se clonou o repo.
 - **Conta de email principal** — vai usar pra criar contas em vários SaaS.
 - **Cartão de crédito** 💳 — alguns serviços pedem só pra "comprovar identidade" mesmo no plano grátis (Supabase, Sentry). Se ficar dentro do free tier, **não cobram nada**.
@@ -52,7 +56,7 @@
 
 Se você quer rodar o app o mais rápido possível com o mínimo viável:
 
-**🟢 Mínimo pra `pnpm dev` subir sem erro fatal (~15 min):**
+**Mínimo da receita Supabase original abaixo (não do modo PostgreSQL local):**
 1. [Supabase](#1-supabase--banco--auth--storage) — sem isso nada funciona (auth + DB).
 2. [Chaves geradas localmente](#9-chaves-geradas-localmente--encryption--secrets) — `INTERNAL_SECRET`, encryption keys.
 3. [Upstash Redis](#2-upstash-redis--rate-limit--idempotência) — rate limit é gate de várias rotas.

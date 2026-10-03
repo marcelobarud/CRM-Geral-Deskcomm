@@ -36,6 +36,7 @@ import {
 import { ARCHIVED_AT, queryTolerantToMissingArchived } from "@/lib/channels/archived";
 import { conferirDefinicao } from "@/lib/channels/conferir-definicao";
 import { isMediaPathOwnedBy } from "@/lib/messaging/media/upload-validation";
+import { assertUrlDeMidiaSegura } from "@/lib/messaging/media/url-de-midia-externa";
 import {
   buildVcard,
   normalizePhoneForDisplay,
@@ -378,6 +379,14 @@ export async function sendMessageHandler(
       ctx.requestId,
       "media_storage_path fora da conversa.",
     );
+  }
+
+  if (input.media_url) {
+    try {
+      await assertUrlDeMidiaSegura(input.media_url);
+    } catch {
+      throw new ApiError(422, "unsafe_media_url", undefined, ctx.requestId, "URL de mídia não permitida.");
+    }
   }
 
   let outboundBody = input.body ?? null;

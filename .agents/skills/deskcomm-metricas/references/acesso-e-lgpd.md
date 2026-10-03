@@ -1,43 +1,14 @@
 # Como chegar no dado — e o que pode sair dele
 
-## Onde o dado mora
+## Onde o dado mora e como obter acesso
 
-- **Não há Postgres na VPS.** O `docker-compose.prod.yml` sobe app, worker, WAHA, Redis, o proxy
-  do Redis, scheduler e Caddy. O banco é o **Supabase** do cliente, alcançado pela connection
-  string `SUPABASE_DB_URL` do `.env` da instalação — a do **Session pooler** (porta 5432).
-- **Não existe papel só-leitura** no produto: a string do app é a role da aplicação e enxerga
-  todas as organizações da instalação. Por isso **toda consulta filtra `organization_id`**, e
-  nenhuma faz `SELECT *` em tabela com dado pessoal.
-- Uma instalação pode ter várias organizações (`organizations`): peça o **nome**, descubra o id,
-  confirme com a pessoa.
+Identifique o alvo sem ler valores de `.env`: local PostgreSQL do CRM Geral ou distribuição Supabase original. Session pooler é receita do ambiente Supabase descrito, não regra universal. A role da aplicação pode enxergar várias organizações: consultas sempre filtram `organization_id`, somente agregados e sem SELECT * com dados pessoais.
 
-## Como obter o acesso (peça uma coisa por vez)
+Use conexão já provisionada e autorizada. Confira presença de configuração com saída booleana/mascarada; não extraia credenciais por grep, não imprima URI nem coloque senha em argumentos, chat, logs ou histórico. A ferramenta de conexão consome o segredo por mecanismo seguro do ambiente, sem retorná-lo ao modelo. Se esse acesso não existir, peça provisionamento seguro do acesso mínimo; não peça que a pessoa cole credenciais no chat.
 
-1. **Dentro da VPS** (por SSH), na pasta do clone: `grep '^SUPABASE_DB_URL=' .env` — use a string
-   **sem** ecoá-la no chat. Rode as consultas com `psql "$SUPABASE_DB_URL" -c "…"` ou via um
-   contêiner descartável: `docker run --rm -i postgres:17-alpine psql "$URL" < consulta.sql`.
-2. **Fora da VPS** (computador da agência): a pessoa cria, no SQL editor do Supabase, um papel
-   só-leitura para você — é a opção de menor privilégio, e precisa ser feita por ela:
+Prefira acesso somente leitura e transação read-only. Não crie roles nem conceda bypassrls como parte de uma análise; isso é mudança de privilégio separada, que exige autorização e avaliação do administrador. Confirme a organização e o período antes das consultas. Um token MCP com escopo de leitura pode oferecer listas agregadas, mas rotas de contato/conversa podem devolver dados pessoais; não as use para métricas.
 
-   ```sql
-   create role crm_leitura login password '<senha forte>';
-   grant usage on schema public to crm_leitura;
-   grant select on all tables in schema public to crm_leitura;
-   alter role crm_leitura set default_transaction_read_only = on;
-   ```
-
-   Sem `bypassrls`, esse papel vê **zero linhas** nas tabelas com RLS (a política depende do
-   usuário logado). Então ou a pessoa concede `bypassrls` (`alter role crm_leitura bypassrls;` —
-   privilégio alto; explique) ou você roda de dentro da VPS com a string do app. Não há terceira
-   via hoje sem mudança no produto.
-3. **Alternativa por MCP** (sem SQL): um token `dsk_…` criado em Configurações › Tokens de API com
-   o escopo `mcp:read` apenas (sem `role:*`) dá acesso a listas prontas — fila de atendimento,
-   leads em risco, casos, follow-ups, propostas de melhoria. Serve para um retrato, não para as
-   análises de funil e custo. Atenção: as ações de leitura de contato e conversa do MCP **devolvem
-   dado pessoal** — não as use para análise.
-
-Nunca peça `SUPABASE_SERVICE_ROLE_KEY` nem o token pessoal do Supabase para analisar: não são
-necessários e ampliam o raio de dano.
+Nunca peça SUPABASE_SERVICE_ROLE_KEY ou token pessoal do Supabase para analisar. Acesso já autorizado não significa permissão para escrever no banco.
 
 ## O que pode ir para o modelo (a fronteira da LGPD nativa)
 
@@ -60,8 +31,4 @@ defensável. Se a pessoa pedir "lê as conversas e me diz o que está errado", �
 
 ## Higiene da sessão
 
-- Consultas em arquivo `.sql` na pasta que a pessoa indicar; resultados agregados no relatório;
-  nada de dump.
-- A connection string não vai para arquivo nenhum seu, nem para o chat; se for preciso repetir
-  comandos, `export URL=…` no shell da sessão.
-- Ao terminar numa máquina fora da VPS: `unset URL`, apague arquivos temporários.
+Consultas sem credenciais no local autorizado; relatório só com agregados e régua explícita, sem dump. Não grave connection string em arquivo intermediário nem exporte seu valor em comandos visíveis. Encerre conexão e remova apenas temporários criados nesta tarefa, preservando arquivos e configurações alheios.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # pre-push do contribuidor — protege a main, não o trabalho.
 #
 # A main é produção: recebe merge de PR revisado, nunca push direto. Feature

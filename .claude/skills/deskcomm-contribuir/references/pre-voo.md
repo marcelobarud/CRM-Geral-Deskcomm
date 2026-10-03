@@ -1,3 +1,7 @@
+
+
+> Receita histórica/especializada do fluxo Deskcomm upstream. AGENTS.md do CRM Geral prevalece. Origin/main nos exemplos assume checkout dedicado cujo origin é o repositório original; não execute esses rituais no fork interno. Revalide comandos, dependências e provas no destino autorizado.
+
 # O pré-voo, item a item — o que cada linha do `pre-voo.sh` significa e o que fazer
 
 O script mede; esta página diz o que fazer com a medida. A ordem é a **frequência com que cada

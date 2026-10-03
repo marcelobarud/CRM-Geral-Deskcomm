@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # armar-hooks.sh — arma, neste clone, os hooks de git do contribuidor.
 #
 # Por que existem: os hooks do mantenedor (`loop/hooks`) são configuração LOCAL

@@ -10,21 +10,9 @@ audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-27)
 
 # Índice da documentação — DeskcommCRM
 
-Mapa dos **154** arquivos `.md` de `docs/`, espalhados por **20** subpastas — medido em
-2026-08-14, com as réguas ao lado: `git ls-files 'docs/**/*.md' | wc -l` e
-`git ls-files 'docs/**/*.md' | sed 's|^docs/||;s|/.*||' | sort -u | wc -l`. Os dois números
-estavam errados (149 e 24) e a segunda régua nem existia — é a mesma classe que
-[`audits/2026-08-14-afirmacoes-de-estado.md`](audits/2026-08-14-afirmacoes-de-estado.md)
-cataloga. Existe porque a documentação cresceu sem ponto
-de entrada: sem este índice, humano e agente não acham o que já foi decidido e
-reescrevem por cima.
+Índice de referências herdadas e atuais do CRM Geral. Metadados de auditoria acima registram a época do inventário original; origin/main ali significa o Deskcomm daquela auditoria, não a main atual do fork.
 
-**Regra de precedência quando dois docs discordam:**
-`CLAUDE.md` (doutrina) > `docs/specs/` (contrato técnico) > `docs/prd/` (intenção) >
-`HANDOFF-*.md` (estado de sessão) > README. Se achou divergência, corrija a fonte
-de menor precedência e registre.
-
----
+**Precedência:** instruções do usuário/plataforma → AGENTS.md (contrato principal) → CLAUDE.md (detalhamento compatível) → fontes especializadas pertinentes. Handoffs, planos e snapshots são contexto histórico. Consulte [a hierarquia](AGENT_INSTRUCTION_HIERARCHY.md).
 
 ## 1. Comece por aqui
 
@@ -34,10 +22,10 @@ de menor precedência e registre.
 | [`VISION.md`](../VISION.md) | Posicionamento, por que self-host, para quem |
 | [`ARCHITECTURE.md`](../ARCHITECTURE.md) | Arquitetura em 1 página |
 | [`AGENTS.md`](../AGENTS.md) | Contrato para agentes de código (qualquer ferramenta) |
-| [`CLAUDE.md`](../CLAUDE.md) | **Doutrina não-negociável.** Convenções, anti-patterns, Definition of Done |
+| [`CLAUDE.md`](../CLAUDE.md) | Referência detalhada subordinada a AGENTS; convenções e Definition of Done |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | Como contribuir |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Mudanças por versão (SemVer). **Quem roda VPS lê antes de `update.sh`** — mudança que exige ação manual aparece sob "⚠️ Requer atenção" |
-| [`docs/current-state.md`](current-state.md) | **O que está pronto, incompleto e quebrado hoje** |
+| [`docs/current-state.md`](current-state.md) | Snapshot datado do produto original; revalidar no checkout |
 | [`.agents/skills/`](../.agents/skills/deskcomm-instalar/SKILL.md) | **Guias do assistente** — instalar, montar cliente por nicho, métricas, prompt, contribuir. Skills lidas por Claude Code, Codex, Cursor, OpenCode e Antigravity (não confundir com as *Skills* do agente de IA, na tela IA › Skills) |
 
 ## 2. Produto e intenção
@@ -144,24 +132,18 @@ acessibilidade).
 
 Documentação de *processo*. Alta rotatividade; trate como estado, não como contrato.
 
-**Convenção observada:** épico **vivo** mantém o HANDOFF na **raiz** do repo; épico
-**encerrado** é arquivado em [`handoffs/`](handoffs/). Use isso para saber o que está em voo.
+Novos handoffs ficam em [handoffs/](handoffs/README.md), nunca na raiz. O índice é histórico e não indica trabalho em voo.
 
-- **Raiz (em voo):** `HANDOFF.md` (follow-up), `HANDOFF-harness-evolution.md`, `HANDOFF-operacao-visivel.md`
-- [`handoffs/`](handoffs/) — arquivados: casos humanos, inbox multimodal, CRM vivo, LGPD, wave1-devvivo, contrato wave5, briefing CRM vivo
 - [`stories/`](stories/) — épicos e stories (`epics/MASTER.md` = plano por epic/wave)
 - [`superpowers/`](superpowers/) — `plans/` e `specs/` datados por onda, mais `handoffs/`
 - [`growth/`](growth/) — material de crescimento · [`brand/`](brand/) — marca · [`white-label.md`](white-label.md) — instalação com marca própria, também em [en](white-label.en.md) e [es](white-label.es.md) (traduções seladas pelo hash do original; ver `scripts/selar-traducao.ts`)
-- [`../plan/`](../plan/) — backlog do gov-loop (`features.json` 31/31, `phases.md`, `progress.md`)
+- [`../plan/`](../plan/) — snapshot do gov-loop, não backlog atual
 - [`../loop/`](../loop/) — máquina do gov-loop (`LOOP.md`, `CHECKPOINT.md`, `checkpoints/G1..G6-report.md` + `.approved`)
 - [`../tasks/todo.md`](../tasks/todo.md) — workflow de construção original (Fase 0 → PRD → specs)
 
 ## 9. Grafo de conhecimento
 
-`graphify-out/` — grafo do repositório (7310 nós, 17705 arestas, 538 comunidades na última
-geração). Consulte via skill `graphify` antes de varrer código bruto. `GRAPH_REPORT.md` traz
-god nodes, hyperedges e comunidades. **Gerado — não editar.** ⚠️ Foi gerado contra uma árvore
-anterior à v1.0.0; regenere (`/graphify .`) antes de confiar em detalhe fino.
+Graphify é auxílio opcional, somente quando a ferramenta e um grafo atualizado estiverem presentes. Sem eles, consulte fontes e [mapas de arquitetura](architecture/). Não é pré-condição nem exige regeneração automática.
 
 ---
 

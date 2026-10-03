@@ -221,7 +221,9 @@ describe("defeito 3 — anonimização LGPD", () => {
       rows[0]!.is_anonymized,
       `a anonimização NÃO aconteceu — resposta ${res.status} ${JSON.stringify(corpo)}`,
     ).toBe(true);
-    expect(rows[0]!.name, "o nome do titular continua no banco").toBeNull();
+    // A ficha agora usa a mesma cascata da LGPD formal: nome sem PII, com rótulo.
+    expect(rows[0]!.name, "o nome do titular não foi substituído pelo rótulo anônimo")
+      .toBe(`Cliente Anonimizado #${id.slice(0, 8)}`);
     expect(rows[0]!.email, "o e-mail do titular continua no banco").toBeNull();
   });
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # pre-commit do contribuidor — dois guardas, e só os irreversíveis.
 # Armado por: bash .agents/skills/deskcomm-contribuir/scripts/armar-hooks.sh
 set -euo pipefail

@@ -39,6 +39,11 @@ export const PUBLIC_PATHS: RegExp[] = [
   /^\/api\/v1\/integrations\/nuvemshop\/callback$/,
   /^\/api\/internal\//,
   /^\/api\/mcp(\/.*)?$/,
+  // Adaptadores locais compatíveis com o contrato HTTP do Supabase.
+  // Eles fazem a autenticação e o contexto RLS dentro da própria rota.
+  /^\/auth\/v1\//,
+  /^\/rest\/v1\//,
+  /^\/storage\/v1\//,
   // GET /api/v1/contacts aceita SESSÃO ou Bearer `dsk_...` (api_tokens) — a
   // MESMA dualidade de `/api/mcp` acima. Sem esta entrada, o proxy responde
   // 401 antes de o Bearer chegar à rota, porque `getUser()` aqui só enxerga

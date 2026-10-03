@@ -1,3 +1,5 @@
+> Receita especializada da distribuição Supabase original, subordinada a AGENTS.md. Session pooler abaixo corresponde ao cenário Cloud/VPS IPv4 descrito; não é requisito universal para pilha própria ou PostgreSQL local. Revalide conectividade e a versão do instalador alvo, sem imprimir credenciais.
+
 # Supabase — o banco de dados
 
 O CRM guarda tudo num projeto Supabase (Postgres gerenciado). O plano **grátis** serve para

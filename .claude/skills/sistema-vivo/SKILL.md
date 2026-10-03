@@ -121,7 +121,7 @@ Nunca escreva "tudo em realtime" numa spec. Diga *quem observa* e *o que age*.
 | Qual a continuidade IA↔humano? | `buildHandoffSummary()` em `lib/agent-engine/agent/human-handoff.ts` |
 | Atualizei o mapa? | `docs/architecture/*.json` (fonte da verdade). **Sem re-render:** o archify 2.11.0 recusa o formato `architecture` — ver `docs/architecture/README.md` |
 
-**Orientação antes de implementar:** rode `graphify query "<pergunta>"` sobre `graphify-out/` para descobrir de quem a peça recebe e quem ela deve alimentar — evita criar ilha por desconhecimento do que já existe.
+**Orientação antes de implementar:** leia fontes e mapas de arquitetura para descobrir entrada, saída e consumidores. Se graphify e um grafo atualizado estiverem disponíveis, use-os como auxílio opcional; sua ausência não bloqueia trabalho nem exige geração.
 
 **Gates mecânicos ligados:** completude de navegação (`tests/unit/navegacao-completude.test.ts`) · forma da cadeia de envio (`tests/unit/before-send-chain-shape.test.ts`) · isolamento entre organizações (`tests/invariants/`).
 

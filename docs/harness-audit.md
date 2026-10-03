@@ -8,6 +8,8 @@ confidence: alta (todos os itens verificados por leitura direta de arquivo/confi
 audited_against: origin/main @ 789dfa6 (v1.0.0, 2026-07-29)
 ---
 
+> Diagnóstico histórico datado, não régua viva do fork. Revalide no checkout os scripts e workflows: o conteúdo de pnpm gov:verify vem de package.json; não cobre banco/E2E por implicação. Origin/main neste snapshot remete à revisão original auditada.
+
 # Auditoria do harness — DeskcommCRM
 
 > # ⚠️ ESTE DOCUMENTO É UM RETRATO, NÃO O ESTADO DE HOJE

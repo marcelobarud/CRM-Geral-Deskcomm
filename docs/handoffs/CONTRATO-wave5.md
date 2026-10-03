@@ -1,3 +1,8 @@
+> Documento histórico de contexto.
+> Não constitui regra global vigente do CRM Geral.
+> Revalide estado e instruções antes de executar qualquer ação descrita aqui.
+> Ordens como “permanente”, “sempre” ou “a partir de agora” pertencem ao épico original, não ao contrato global.
+
 # Wave 5 — as condições, reescritas para colar
 
 > @Arquiteto → @Assistente e Testes · carimbo **HEAD 083aeb3**, `supabase/migrations/…0074…sql` já no disco.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # check-migration-triple.sh (contribuidor) — a tripla de migration é indivisível.
 #
 # Commit que ADICIONA supabase/migrations/*.sql precisa, no MESMO commit:

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Escopo: contribuição intencional Deskcomm upstream, em checkout dedicado com origin original verificado.
+# Não aplicar automaticamente ao desenvolvimento interno do CRM Geral; AGENTS.md prevalece.
 # avisar-identidade.sh — o crédito do commit é da pessoa, não da máquina.
 #
 # Commits feitos direto numa VPS saem assinados como `root@vps-…`, e o GitHub não

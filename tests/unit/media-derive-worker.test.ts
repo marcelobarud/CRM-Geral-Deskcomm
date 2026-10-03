@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const downloadMock = vi.fn();
 const updateEqMock = vi.fn();
+let redactedDuringDerivation = false;
+let writeError = false;
 const messageRow = {
   id: "msg1",
   organization_id: "org1",
@@ -35,10 +37,10 @@ vi.mock("@/lib/supabase/admin", () => ({
         single: async () => ({ data: linha, error: null }),
         update: (patch: Record<string, unknown>) => {
           updateEqMock(patch);
-          return { eq: () => ({ eq: async () => ({ error: null }) }) };
+          return chain;
         },
         then: (resolve: (v: unknown) => unknown) =>
-          Promise.resolve({ data: linha ? [linha] : [], error: null }).then(resolve),
+          Promise.resolve({ data: redactedDuringDerivation ? [] : linha ? [linha] : [], error: writeError ? { message: "write refused" } : null }).then(resolve),
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const chain: any = new Proxy(terminais, {
@@ -92,6 +94,8 @@ describe("deriveMessageMedia", () => {
     updateEqMock.mockReset();
     messageRow.media_derived_status = null;
     messageRow.type = "audio";
+    redactedDuringDerivation = false;
+    writeError = false;
     vi.mocked(deriveMediaText).mockReset().mockResolvedValue("transcrição do áudio real");
   });
 
@@ -108,6 +112,16 @@ describe("deriveMessageMedia", () => {
     const r = await deriveMessageMedia(eventRow());
     expect(r.status).toBe("skipped");
     expect(deriveMediaText).not.toHaveBeenCalled();
+  });
+
+  it("pula escrita que perdeu a mídia por anonimização durante a derivação", async () => {
+    vi.mocked(deriveMediaText).mockImplementation(async () => { redactedDuringDerivation = true; return "PII fictícia"; });
+    expect(await deriveMessageMedia(eventRow())).toMatchObject({ status: "skipped", detail: "message_redacted" });
+  });
+
+  it("não declara sucesso se a gravação falha", async () => {
+    writeError = true;
+    expect(await deriveMessageMedia(eventRow())).toMatchObject({ status: "error", detail: "media_derive_write_failed" });
   });
 
   it("tipo sem derivado (sticker) → skipped sem baixar", async () => {
