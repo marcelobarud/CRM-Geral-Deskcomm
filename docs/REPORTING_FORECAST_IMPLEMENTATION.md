@@ -163,6 +163,15 @@ navegação, com prazo de compilação de 120s e status HTTP no checkpoint, sem
 persistir resposta bruta. UI e persistência por PATCH continuam obrigatórias.
 Limpeza independente confirmou zero organizações e usuários dos IDs do journal.
 
+Terceira execução real (2026-10-03): configuração das probabilidades pela UI e
+cenários JWT/RLS/cents/moedas/período/conversão/own-scope passaram. Timeout ao
+aplicar filtros: captura mostrou data inicial padrão em vez de janeiro e erro
+de período inválido. O harness aguarda dados do relatório (query após hidratação)
+antes de editar inputs controlados, confirma ambos os valores e sai dos campos
+por teclado antes de aplicar. Não alterada regra do produto. Cleanup confirmado
+pelo resultado e por consulta independente: zero organizações/usuários do journal.
+Jornada visual completa, movimento/ganho e MFA final continuam pendentes.
+
 ## Gaps e Git
 
 P0: nenhum identificado nas provas concluídas; aceite completo ainda pendente.

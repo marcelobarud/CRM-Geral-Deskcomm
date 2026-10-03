@@ -68,7 +68,13 @@ export async function verifyReportingForecast({admin,a,b,viewer,agent,anon,orgA,
   const panel=page.getByRole("region",{name:"Relatório comercial",exact:true});
   const openReport=async()=>{
    await page.goto(app+"/app/metrics",{timeout:120000});
-   await panel.getByLabel("De (UTC)",{exact:true}).fill("2026-01-01");await panel.getByLabel("Até (UTC, exclusivo)",{exact:true}).fill("2026-02-01");
+   insist(true,"E UI relatório carregado antes dos filtros");
+   // Dados da query provam que o componente hidratou antes de editar inputs controlados.
+   await panel.getByRole("article",{name:"BRL",exact:true}).waitFor({timeout:120000});
+   const fromInput=panel.getByLabel("De (UTC)",{exact:true}),toInput=panel.getByLabel("Até (UTC, exclusivo)",{exact:true});
+   await fromInput.fill("2026-01-01");await fromInput.press("Tab");
+   await toInput.fill("2026-02-01");await toInput.press("Tab");
+   await expect(fromInput).toHaveValue("2026-01-01");await expect(toInput).toHaveValue("2026-02-01");
    await panel.getByRole("combobox",{name:/^Funil/}).selectOption(pipe);
    const [r]=await Promise.all([page.waitForResponse(r=>r.url().includes("/reports/commercial?")&&r.url().includes("pipeline_id="+pipe)&&r.url().includes("from=2026-01-01")),panel.getByRole("button",{name:"Aplicar filtros",exact:true}).click()]);insist(r.ok(),"E relatório UI");
   };
