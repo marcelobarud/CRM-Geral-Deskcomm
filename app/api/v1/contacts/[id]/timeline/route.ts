@@ -163,11 +163,14 @@ export async function GET(
         performed_at: h.created_at,
         performed_by_user_id: h.actor_user_id,
         actor_kind: h.actor_user_id ? "user" : "system",
-        reason: h.metadata.company_id
-          ? h.metadata.previous_company_id
-            ? "Empresa vinculada ao contato alterada."
-            : "Empresa vinculada ao contato."
-          : "Vínculo com empresa removido.",
+        reason:
+          typeof h.metadata.reason === "string"
+            ? h.metadata.reason
+            : h.metadata.company_id
+              ? h.metadata.previous_company_id
+                ? "Empresa vinculada ao contato alterada."
+                : "Empresa vinculada ao contato."
+              : "Vínculo com empresa removido.",
       });
   }
   for (const row of (directRes.data ?? []) as unknown as TimelineItem[]) merged.set(row.id, row);

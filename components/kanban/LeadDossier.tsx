@@ -17,6 +17,7 @@ import { resolveLeadOwner } from "@/lib/kanban/owner";
 import type { CustomFieldDef } from "@/components/contacts/CustomFieldsEditor";
 import { OpportunityTasks } from "@/components/commercial/OpportunityTasks";
 import { CommercialContextPanel } from "@/components/commercial/CommercialContextPanel";
+import { ProposalContextLink } from "@/components/proposals/ProposalContextLink";
 
 interface Props {
   open: boolean;
@@ -28,7 +29,7 @@ interface Props {
   ownerNames?: Map<string, string | null>;
 }
 
-function formatBRL(cents: number | null, currency: string | null): string  {
+function formatBRL(cents: number | null, currency: string | null): string {
   return cents === null ? "—" : formatCents(cents, currency ?? "BRL");
 }
 
@@ -125,6 +126,7 @@ export function LeadDossier({
         )}
 
         <ConversaNoDossie conversa={lead.conversa} />
+        <ProposalContextLink leadId={lead.id} />
         {open && !lead.contact_id && <OpportunityTasks leadId={lead.id} />}
         {open && lead.contact_id && (
           <CommercialContextPanel contactId={lead.contact_id} leadId={lead.id} />

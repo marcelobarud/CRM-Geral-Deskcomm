@@ -2,6 +2,13 @@ import { roleAtLeast, type Role } from "@/lib/auth/types";
 
 /** Suporte é propriedade da release, não uma autorização editável pelo browser. */
 export const CAPABILITIES = {
+  proposals: {
+    name: "Propostas",
+    description: "Propostas comerciais com versões preservadas e PDF privado.",
+    default_enabled: false,
+    min_role: "agent" as Role,
+    href: "/app/proposals",
+  },
   message_templates: {
     name: "Respostas rápidas",
     description: "Criar e usar respostas salvas, pessoais ou da equipe.",

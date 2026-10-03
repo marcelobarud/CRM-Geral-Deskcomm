@@ -5,6 +5,7 @@ import { fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import type { Role } from "@/lib/auth/types";
 import { createClient } from "@/lib/supabase/server";
+import { proposalReadiness } from "@/lib/proposals/readiness";
 import {
   CAPABILITIES,
   resolveCapability,
@@ -31,7 +32,12 @@ export async function loadCapabilities(
       randomUUID(),
       "Não foi possível consultar a configuração da organização.",
     );
-  return Object.keys(CAPABILITIES).map((id) => resolveCapability(id, data.settings, role));
+  const readiness = resolveCapability("proposals", data.settings, role).enabled
+    ? await proposalReadiness()
+    : undefined;
+  return Object.keys(CAPABILITIES).map((id) =>
+    resolveCapability(id, data.settings, role, id === "proposals" ? readiness : undefined),
+  );
 }
 
 export function assertEffectiveCapability(

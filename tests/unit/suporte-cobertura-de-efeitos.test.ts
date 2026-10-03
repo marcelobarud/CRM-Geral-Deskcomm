@@ -44,7 +44,7 @@ it("todo handler mutante do app declara guarda de suporte ou é infraestrutura i
      trechos.push([decl.name.text,decl.getText(source)]);
   }
   for(const [nome,texto] of trechos)
-   if(!texto.includes("requireSupportWrite(")&&!texto.includes("methodNotAllowed("))uncovered.push(`${path}:${nome}`);
+   if(!texto.includes("requireSupportWrite(")&&!texto.includes("methodNotAllowed(")&&!(texto.includes("proposalCommand(")&&readFileSync(path,"utf8").includes('from "@/lib/proposals/api"')&&readFileSync("lib/proposals/api.ts","utf8").includes("await requireSupportWrite(")))uncovered.push(`${path}:${nome}`);
  }
  expect(uncovered).toEqual([]);
 });
