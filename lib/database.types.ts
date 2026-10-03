@@ -3405,6 +3405,7 @@ export type Database = {
           birthdate: string | null
           blocked_at: string | null
           blocked_reason: string | null
+          company_id: string | null
           consent: Json
           cpf_encrypted: string | null
           cpf_hash: string | null
@@ -3442,6 +3443,7 @@ export type Database = {
           birthdate?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          company_id?: string | null
           consent?: Json
           cpf_encrypted?: string | null
           cpf_hash?: string | null
@@ -3479,6 +3481,7 @@ export type Database = {
           birthdate?: string | null
           blocked_at?: string | null
           blocked_reason?: string | null
+          company_id?: string | null
           consent?: Json
           cpf_encrypted?: string | null
           cpf_hash?: string | null
@@ -3508,6 +3511,13 @@ export type Database = {
           wa_lid?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_company_same_org"
+            columns: ["company_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id", "organization_id"]
+          },
           {
             foreignKeyName: "contacts_is_merged_into_fkey"
             columns: ["is_merged_into"]
@@ -3778,6 +3788,74 @@ export type Database = {
           },
           {
             foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          document: string | null
+          document_type: string | null
+          email: string | null
+          id: string
+          is_archived: boolean
+          legal_name: string | null
+          name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_archived?: boolean
+          legal_name?: string | null
+          name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          document?: string | null
+          document_type?: string | null
+          email?: string | null
+          id?: string
+          is_archived?: boolean
+          legal_name?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_companies_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -8835,6 +8913,35 @@ export type Database = {
           p_hash: string
           p_key: string
           p_request: Json
+        }
+        Returns: Json
+      }
+      fn_crm_company_command: {
+        Args: {
+          p_action: string
+          p_company?: string
+          p_data?: Json
+          p_org: string
+          p_request?: string
+        }
+        Returns: Json
+      }
+      fn_crm_company_contact_history: {
+        Args: {
+          p_before?: string
+          p_before_id?: string
+          p_contact: string
+          p_limit?: number
+          p_org: string
+        }
+        Returns: Json
+      }
+      fn_crm_company_manage: {
+        Args: {
+          p_action: string
+          p_company?: string
+          p_data?: Json
+          p_org: string
         }
         Returns: Json
       }

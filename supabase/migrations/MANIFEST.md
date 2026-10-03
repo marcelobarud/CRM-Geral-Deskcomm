@@ -312,3 +312,7 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261003174000` | `0248_crm_geral_tags_assignment_audit` | Audita vínculos reais e identifica replay idempotente sem repetir eventos. |
 | `20261003175000` | `0249_crm_geral_tags_fk_indexes` | Índices para FKs de tag, ator e origem mesclada introduzidas no Bloco C. |
 | `20261003180000` | `0250_crm_geral_tags_normalized_compatibility` | Preserva grafia normalizada em projeções e bloqueia exclusão de referências JSON nessa grafia. |
+| `20261003210000` | `0251_crm_geral_b2b_simples` | Empresa comercial por tenant, contato 0..1, RLS, arquivo seguro e histórico. |
+| `20261003211000` | `0252_crm_geral_b2b_history` | Projeta auditoria do vínculo de contato na timeline existente, inclusive sem lead. |
+| `20261003212000` | `0253_crm_geral_b2b_idempotency` | Reusa ledger existente para criação idempotente; auditoria não bloqueia vínculo se falhar. |
+| `20261003213000` | `0254_crm_geral_b2b_receipts_guard` | Protege namespace do receipt B2B contra escrita direta nos grants legados do ledger, preservando outros endpoints e cascata do tenant. |
