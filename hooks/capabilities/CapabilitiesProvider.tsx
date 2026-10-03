@@ -8,6 +8,7 @@ export interface CapabilityReadModel {
   organization_id: string;
   can_manage: boolean;
   capabilities: EffectiveCapability[];
+  error?: string;
 }
 const Context = createContext<CapabilityReadModel | null>(null);
 export const capabilityQueryKey = (org: string) => ["capabilities", org] as const;
@@ -38,11 +39,12 @@ export function CapabilitiesProvider({
   const value = query.data?.organization_id === org ? query.data : null;
   // Snapshot client não autoriza efeitos. Falha de refresh retira ações da UI.
   const safe =
-    query.isError && value
+    query.isError && activeOrg
       ? {
-          ...value,
+          organization_id: org,
           can_manage: false,
-          capabilities: value.capabilities.map((c) => ({
+          error: "Não foi possível atualizar a configuração.",
+          capabilities: (value?.capabilities ?? []).map((c) => ({
             ...c,
             state: "DEGRADED" as const,
             can_execute: false,

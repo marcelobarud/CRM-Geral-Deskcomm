@@ -38,6 +38,12 @@ function show({
   );
 }
 describe("administração de capacidades", () => {
+  it("falha de leitura inicial mostra erro e caminho de atualização", () => {
+    snapshot.model = { organization_id: "A", can_manage: false, capabilities: [], error: "Não foi possível atualizar a configuração." };
+    render(<QueryClientProvider client={new QueryClient()}><CapabilitiesForm /></QueryClientProvider>);
+    expect(screen.getByRole("alert").textContent).toContain("Não foi possível atualizar");
+    expect(screen.getByRole("button", { name: "Atualizar disponibilidade" })).toBeTruthy();
+  });
   it("desativada conserva controle e motivo, sem apresentar pronto", () => {
     show({ enabled: false });
     expect(screen.getByText("Desativado")).toBeTruthy();
