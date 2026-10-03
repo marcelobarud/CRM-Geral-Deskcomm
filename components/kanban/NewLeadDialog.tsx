@@ -1,7 +1,9 @@
 "use client";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { useT } from "@/hooks/i18n/useT";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -28,6 +30,9 @@ import type { Stage } from "@/lib/kanban/types";
 import { createLeadSchema, type CreateLeadInput } from "@/lib/schemas/leads";
 import { parseReaisToCents } from "@/lib/money";
 import { EcoDoValor } from "./EcoDoValor";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
+import { useContactList } from "@/hooks/contacts/useContactList";
 
 interface FormShape {
   title: string;
@@ -36,6 +41,10 @@ interface FormShape {
   valueReais: string;
   tagsRaw: string;
   expected_close_date: string;
+  contact_id: string;
+  owner_user_id: string;
+  source: string;
+  currency: string;
 }
 
 interface Props {
@@ -64,6 +73,10 @@ export function NewLeadDialog({
 }: Props) {
   const t = useT();
   const create = useCreateLead(pipelineId);
+  const { user } = useAuth();
+  const members = useAssignableMembers(open);
+  const [contactSearch, setContactSearch] = useState("");
+  const contacts = useContactList({ search: contactSearch, limit: 25 }, open && !contactId);
   const initialStage = useMemo(() => defaultStageId(stages), [stages]);
 
   const form = useForm<FormShape>({
@@ -74,6 +87,10 @@ export function NewLeadDialog({
       valueReais: "",
       tagsRaw: "",
       expected_close_date: "",
+      contact_id: contactId ?? "",
+      owner_user_id: user.id,
+      source: "manual",
+      currency: "BRL",
     },
   });
 
@@ -104,11 +121,12 @@ export function NewLeadDialog({
       pipeline_id: pipelineId,
       stage_id: values.stage_id,
       title: values.title.trim(),
-      currency: "BRL",
-      source: "manual",
+      currency: values.currency.trim().toUpperCase(),
+      source: values.source.trim(),
       tags,
     };
-    if (contactId) payload.contact_id = contactId;
+    if (contactId || values.contact_id) payload.contact_id = contactId || values.contact_id;
+    if (values.owner_user_id) payload.owner_user_id = values.owner_user_id;
     if (values.description.trim()) payload.description = values.description.trim();
     if (valueCents !== null) payload.value_cents = valueCents;
     if (values.expected_close_date) payload.expected_close_date = values.expected_close_date;
@@ -131,6 +149,10 @@ export function NewLeadDialog({
         valueReais: "",
         tagsRaw: "",
         expected_close_date: "",
+        contact_id: contactId ?? "",
+        owner_user_id: user.id,
+        source: "manual",
+        currency: "BRL",
       });
       onOpenChange(false);
     } catch {
@@ -142,23 +164,90 @@ export function NewLeadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Lead</DialogTitle>
-          <DialogDescription>
-            {t("Crie um lead manualmente neste pipeline.")}
-          </DialogDescription>
+          <DialogTitle>{t("Nova oportunidade")}</DialogTitle>
+          <DialogDescription>{t("Crie um lead manualmente neste pipeline.")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">{t("Título")}</Label>
             <Input
               id="title"
-              placeholder="Ex: Pedido Maria — combo presente"
+              placeholder={t("Ex.: negociação comercial")}
               {...form.register("title", { required: true, minLength: 2 })}
             />
+            {form.formState.errors.title && (
+              <p role="alert">{t("Informe um título com pelo menos dois caracteres.")}</p>
+            )}
           </div>
 
+          {!contactId && (
+            <div className="space-y-2">
+              <Label htmlFor="lead-contact-search">{t("Buscar contato")}</Label>
+              <Input
+                id="lead-contact-search"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+              />
+              <Label htmlFor="lead-contact">{t("Contato")}</Label>
+              <select
+                id="lead-contact"
+                className="w-full rounded-md border bg-surface p-2"
+                {...form.register("contact_id")}
+              >
+                <option value="">{t("Sem contato")}</option>
+                {contacts.data?.pages
+                  .flatMap((page) => page.data)
+                  .filter((c) => !c.is_anonymized)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {rotuloDoContato(c, t)}
+                    </option>
+                  ))}
+              </select>
+              {contacts.isError && <p role="alert">{t("Erro ao carregar contato.")}</p>}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="lead-owner">{t("Responsável")}</Label>
+            <select
+              id="lead-owner"
+              className="w-full rounded-md border bg-surface p-2"
+              {...form.register("owner_user_id")}
+            >
+              <option value="">{t("Sem responsável")}</option>
+              {members.data?.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.full_name || t("Membro da equipe")}
+                </option>
+              ))}
+            </select>
+            {members.isError && (
+              <p role="alert">{t("Não foi possível carregar os responsáveis.")}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="lead-source">{t("Origem")}</Label>
+              <Input id="lead-source" {...form.register("source", { required: true })} />
+              {form.formState.errors.source && <p role="alert">{t("Informe a origem.")}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lead-currency">{t("Moeda")}</Label>
+              <select
+                id="lead-currency"
+                className="w-full rounded-md border bg-surface p-2"
+                {...form.register("currency", { required: true })}
+              >
+                {MOEDAS_SERVIDAS.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="description">{t("Descrição")}</Label>
             <Textarea
@@ -170,12 +259,9 @@ export function NewLeadDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>{t("Etapa")}</Label>
-            <Select
-              value={stageId}
-              onValueChange={(v) => form.setValue("stage_id", v)}
-            >
-              <SelectTrigger>
+            <Label htmlFor="lead-stage">{t("Etapa")}</Label>
+            <Select value={stageId} onValueChange={(v) => form.setValue("stage_id", v)}>
+              <SelectTrigger id="lead-stage">
                 <SelectValue placeholder={t("Selecione a etapa")} />
               </SelectTrigger>
               <SelectContent>
@@ -192,18 +278,16 @@ export function NewLeadDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="valueReais">Valor (R$)</Label>
+              <Label htmlFor="valueReais">{t("Valor")}</Label>
               <Input
                 id="valueReais"
                 inputMode="decimal"
                 placeholder="0,00"
                 {...form.register("valueReais")}
               />
-              <EcoDoValor control={form.control} />
+              <EcoDoValor control={form.control} currency={form.watch("currency")} />
               {form.formState.errors.valueReais && (
-                <p className="text-xs text-error-fg">
-                  {form.formState.errors.valueReais.message}
-                </p>
+                <p className="text-xs text-error-fg">{form.formState.errors.valueReais.message}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -218,11 +302,7 @@ export function NewLeadDialog({
 
           <div className="space-y-2">
             <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
-            <Input
-              id="tagsRaw"
-              placeholder="vip, recompra"
-              {...form.register("tagsRaw")}
-            />
+            <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
           </div>
 
           <DialogFooter>
@@ -232,10 +312,10 @@ export function NewLeadDialog({
               onClick={() => onOpenChange(false)}
               disabled={create.isPending}
             >
-              Cancelar
+              {t("Cancelar")}
             </Button>
             <Button type="submit" disabled={create.isPending || !stageId}>
-              {create.isPending ? "Criando…" : "Criar lead"}
+              {create.isPending ? t("Criando…") : t("Criar lead")}
             </Button>
           </DialogFooter>
         </form>

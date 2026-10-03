@@ -15,7 +15,7 @@
  * Cobre:
  *  1. mensagem nova de contato desconhecido ⇒ card no funil de entrada, com o
  *     nome de quem escreveu;
- *  2. a timeline explica de onde ele veio ("Entrou pelo WhatsApp");
+ *  2. a timeline explica de onde ele veio ("Oportunidade criada");
  *  3. a segunda mensagem do MESMO contato não abre um segundo card.
  */
 import { execFileSync } from "node:child_process";
@@ -117,10 +117,10 @@ test.describe("a conversa vira lead", () => {
 
     await page.getByText(NOME, { exact: false }).first().click();
 
-    // "Entrou pelo WhatsApp" é o rótulo de `lead_created`. Card que aparece sem
+    // "Oportunidade criada" é o rótulo de `lead_created`. Card que aparece sem
     // explicação é como se perde a confiança num automatismo — o dono não sabe
     // se foi ele, a IA, ou um erro.
-    await expect(page.getByText(/entrou pelo whatsapp/i).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/oportunidade criada/i).first()).toBeVisible({ timeout: 20_000 });
   });
 
   test("a segunda mensagem do mesmo contato NÃO abre um segundo card", async ({ page }) => {

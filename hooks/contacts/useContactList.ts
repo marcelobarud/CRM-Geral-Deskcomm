@@ -19,8 +19,9 @@ export interface ContactListFilters {
   limit?: number;
 }
 
-export function useContactList(filters: ContactListFilters) {
+export function useContactList(filters: ContactListFilters, enabled = true) {
   return useInfiniteQuery({
+    enabled,
     queryKey: ["contacts", filters],
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
@@ -39,7 +40,6 @@ export function useContactList(filters: ContactListFilters) {
         throw err;
       }
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.meta?.has_more ? lastPage.meta.cursor : undefined,
+    getNextPageParam: (lastPage) => (lastPage.meta?.has_more ? lastPage.meta.cursor : undefined),
   });
 }

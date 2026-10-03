@@ -1,4 +1,5 @@
 "use client";
+import { formatCents } from "@/lib/money";
 
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useRef } from "react";
@@ -14,6 +15,8 @@ import { LeadTimeline } from "./LeadTimeline";
 import { OwnerBadge } from "./OwnerBadge";
 import { resolveLeadOwner } from "@/lib/kanban/owner";
 import type { CustomFieldDef } from "@/components/contacts/CustomFieldsEditor";
+import { OpportunityTasks } from "@/components/commercial/OpportunityTasks";
+import { CommercialContextPanel } from "@/components/commercial/CommercialContextPanel";
 
 interface Props {
   open: boolean;
@@ -25,17 +28,8 @@ interface Props {
   ownerNames?: Map<string, string | null>;
 }
 
-function formatBRL(cents: number | null, currency: string | null): string {
-  if (cents === null) return "—";
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currency ?? "BRL",
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
-  }
+function formatBRL(cents: number | null, currency: string | null): string  {
+  return cents === null ? "—" : formatCents(cents, currency ?? "BRL");
 }
 
 /**
@@ -86,7 +80,7 @@ export function LeadDossier({
 
         {/* ① cabeçalho vivo */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border pb-3 text-xs">
-          <span className="font-medium tabular-nums text-text">
+          <span className="font-medium text-text tabular-nums">
             {formatBRL(lead.value_cents, lead.currency)}
           </span>
           <span className="text-text-muted">{stageName}</span>
@@ -131,10 +125,14 @@ export function LeadDossier({
         )}
 
         <ConversaNoDossie conversa={lead.conversa} />
+        {open && !lead.contact_id && <OpportunityTasks leadId={lead.id} />}
+        {open && lead.contact_id && (
+          <CommercialContextPanel contactId={lead.contact_id} leadId={lead.id} />
+        )}
 
         {/* ② timeline */}
         <section className="flex-1 py-3">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+          <h3 className="mb-2 text-xs font-medium tracking-wide text-text-muted uppercase">
             {t("Linha do tempo")}
           </h3>
           <LeadTimeline
@@ -147,7 +145,7 @@ export function LeadDossier({
 
         {/* ③ campos, por último */}
         <div ref={campos} className="border-t border-border pt-3">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+          <h3 className="mb-2 text-xs font-medium tracking-wide text-text-muted uppercase">
             {t("Dados do negócio")}
           </h3>
           <LeadFieldsForm lead={lead} pipelineId={pipelineId} fieldDefs={fieldDefs} />

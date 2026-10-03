@@ -1,4 +1,6 @@
 "use client";
+import { formatCents } from "@/lib/money";
+import { commercialValuesByCurrency } from "@/lib/commercial/value";
 import { Droppable } from "@hello-pangea/dnd";
 import { useRef, type CSSProperties } from "react";
 import { useT } from "@/hooks/i18n/useT";
@@ -35,17 +37,6 @@ interface StageColumnProps {
   onOpen?: (leadId: string) => void;
 }
 
-function formatBRL(cents: number): string {
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  } catch {
-    return `R$ ${(cents / 100).toFixed(0)}`;
-  }
-}
 
 export function StageColumn({
   stage,
@@ -61,7 +52,7 @@ export function StageColumn({
   onOpen,
 }: StageColumnProps) {
   const t = useT();
-  const totalCents = leads.reduce((sum, l) => sum + (l.value_cents ?? 0), 0);
+  const totals = [...commercialValuesByCurrency(leads)].filter(([, value]) => value > 0);
 
   const idsVisiveis = leads.map((l) => l.id);
   const selecionadosAqui = idsVisiveis.filter((id) => selectedLeadIds?.has(id)).length;
@@ -136,9 +127,9 @@ export function StageColumn({
         </span>
       </div>
 
-      {totalCents > 0 && (
+      {totals.length > 0 && (
         <div className="border-b border-border px-3 py-1.5 text-[11px] tabular-nums text-text-muted">
-          {formatBRL(totalCents)}
+          {totals.map(([currency, cents]) => formatCents(cents, currency)).join(" · ")}
         </div>
       )}
 

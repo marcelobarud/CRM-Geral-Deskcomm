@@ -17,6 +17,9 @@
   ],
   "mainPath": ["leadstate", "atividades", "slot", "decisao", "fila", "leads"],
   "nodes": [
+    {"id":"contextocomercial","lane":"humano","col":1,"type":"frontend","label":"Contexto comercial","sublabel":"contato e dossiê: oportunidades, tarefas e agenda"},
+    {"id":"tarefashumanas","lane":"negocio","col":1,"type":"database","label":"crm_tasks","sublabel":"próximo passo humano com responsável e prazo"},
+    {"id":"agendacontato","lane":"negocio","col":2,"type":"database","label":"calendar_appointments","sublabel":"compromissos do contato, sem duplicação por negócio"},
     { "id": "card", "lane": "humano", "col": 3, "type": "frontend", "label": "Card do Kanban", "sublabel": "5 elementos · altura constante" },
     { "id": "slot", "lane": "humano", "col": 2, "type": "frontend", "label": "O slot (faixa ③)", "sublabel": "aguardando > esfriando > normal" },
     { "id": "dossie", "lane": "humano", "col": 4, "type": "frontend", "label": "Dossiê (Sheet)", "sublabel": "cabeçalho > timeline > campos" },
@@ -48,6 +51,10 @@
     { "id": "inbox", "lane": "fora", "col": 4, "type": "frontend", "label": "agent_inbox_items", "sublabel": "demanda sem dono não mora no Kanban" }
   ],
   "edges": [
+    {"id":"b-context-leads","from":"contextocomercial","to":"leads","label":"consulta vínculos por organização e contato"},
+    {"id":"b-context-tasks","from":"contextocomercial","to":"tarefashumanas","label":"cria e conclui próximo passo"},
+    {"id":"b-tasks-activities","from":"tarefashumanas","to":"emissor","label":"registra criação e conclusão na timeline"},
+    {"id":"b-context-agenda","from":"contextocomercial","to":"agendacontato","label":"abre agendamento com contato preservado"},
     { "id": "e1", "from": "ritual", "to": "leadstate", "label": "escreve estágio e next_action" },
     { "id": "e2", "from": "ritual", "to": "checkpoints", "label": "grava o turno" },
     { "id": "e3", "from": "ritual", "to": "traces", "label": "registra portões e veto" },

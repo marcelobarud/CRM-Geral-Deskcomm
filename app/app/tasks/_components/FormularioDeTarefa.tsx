@@ -21,12 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useT } from "@/hooks/i18n/useT";
-import type {
-  NovaTarefa,
-  PrioridadeDaTarefa,
-  SituacaoDaTarefa,
-  Tarefa,
-} from "@/lib/tarefas/tipos";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
+import type { NovaTarefa, PrioridadeDaTarefa, SituacaoDaTarefa, Tarefa } from "@/lib/tarefas/tipos";
 
 interface Props {
   aberto: boolean;
@@ -84,6 +80,8 @@ export function FormularioDeTarefa({
   const [situacao, setSituacao] = useState<SituacaoDaTarefa>(tarefa?.status ?? "pending");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const members = useAssignableMembers(aberto);
+  const [responsavel, setResponsavel] = useState(tarefa?.assigned_to ?? "");
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -107,6 +105,7 @@ export function FormularioDeTarefa({
         status: situacao,
         lead_id: tarefa?.lead_id ?? leadId ?? null,
         contact_id: tarefa?.contact_id ?? contactId ?? null,
+        assigned_to: responsavel || null,
       });
       aoMudarAbertura(false);
     } catch (falha) {
@@ -119,7 +118,7 @@ export function FormularioDeTarefa({
 
   return (
     <Dialog open={aberto} onOpenChange={aoMudarAbertura}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{editando ? t("Editar tarefa") : t("Nova tarefa")}</DialogTitle>
         </DialogHeader>
@@ -136,6 +135,29 @@ export function FormularioDeTarefa({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor="tarefa-responsavel">{t("Responsável")}</Label>
+            <select
+              id="tarefa-responsavel"
+              className="w-full rounded-md border bg-surface p-2"
+              value={responsavel}
+              onChange={(e) => setResponsavel(e.target.value)}
+            >
+              <option value="">{t("Sem responsável")}</option>
+              {tarefa?.assigned_to &&
+                !members.data?.some((m) => m.user_id === tarefa.assigned_to) && (
+                  <option value={tarefa.assigned_to}>{t("Responsável atual")}</option>
+                )}
+              {members.data?.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.full_name || t("Membro da equipe")}
+                </option>
+              ))}
+            </select>
+            {members.isError && (
+              <p role="alert">{t("Não foi possível carregar os responsáveis.")}</p>
+            )}
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="tarefa-descricao">{t("Detalhes")}</Label>
             <Textarea
@@ -206,7 +228,10 @@ export function FormularioDeTarefa({
           </div>
 
           {erro ? (
-            <p role="alert" className="rounded-md bg-destructive/10 p-2 text-xs font-medium text-destructive">
+            <p
+              role="alert"
+              className="rounded-md bg-destructive/10 p-2 text-xs font-medium text-destructive"
+            >
               {erro}
             </p>
           ) : null}

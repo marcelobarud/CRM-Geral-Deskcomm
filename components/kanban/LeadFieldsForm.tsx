@@ -137,14 +137,14 @@ export function LeadFieldsForm({ lead, pipelineId, fieldDefs = [], onSaved, onCa
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="valueReais">{t("Valor (R$)")}</Label>
+            <Label htmlFor="valueReais">{t("Valor")} ({lead.currency || "BRL"})</Label>
             <Input
               id="valueReais"
               inputMode="decimal"
               placeholder="0,00"
               {...form.register("valueReais")}
             />
-            <EcoDoValor control={form.control} />
+            <EcoDoValor control={form.control} currency={lead.currency || "BRL"} />
             {form.formState.errors.valueReais && (
               <p className="text-xs text-error-fg">
                 {t(form.formState.errors.valueReais.message ?? "")}
