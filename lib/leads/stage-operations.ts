@@ -51,10 +51,11 @@ export interface DepsDeEtapa {
 
 /** As colunas que a tela e as regras usam. `position` entra: a reordenação calcula em cima dela. */
 const COLUNAS =
-  "id, name, slug, position, is_won, is_lost, is_archived, agent_stage_hint, last_change_actor_kind, last_change_at";
+  "id, name, slug, position, is_won, is_lost, is_archived, agent_stage_hint, probability_percent, last_change_actor_kind, last_change_at";
 
 /** A etapa como sai para quem lê — inclui a autoria da última mudança de configuração. */
 export interface EtapaVisivel {
+  probability_percent?: number | null;
   id: string;
   name: string;
   slug: string;
@@ -67,6 +68,7 @@ export interface EtapaVisivel {
 }
 
 type EtapaLida = EtapaEditavel & {
+  probability_percent?: number | null;
   last_change_actor_kind: string | null;
   last_change_at: string | null;
 };
@@ -117,6 +119,7 @@ export function corpo(etapas: EtapaLida[]): { etapas: EtapaVisivel[] } {
         name: e.name,
         slug: e.slug,
         position: e.position,
+        probability_percent: e.probability_percent ?? null,
         is_won: e.is_won,
         is_lost: e.is_lost,
         last_change_actor_kind: e.last_change_actor_kind ?? null,
@@ -273,6 +276,7 @@ export async function criarEtapa(
 // ---------------------------------------------------------------------------
 
 export interface PedidoDeEdicao {
+  probability_percent?: number | null;
   name?: string;
   is_won?: boolean;
   is_lost?: boolean;
@@ -333,8 +337,12 @@ export async function atualizarEtapa(
     }
   }
 
-  const patchDoAlvo: PatchDeMarcacao & { name?: string; position?: number } = {};
+  const patchDoAlvo: PatchDeMarcacao & { name?: string; position?: number; probability_percent?: number | null } = {};
   if (pedido.name !== undefined) patchDoAlvo.name = pedido.name.trim();
+  if (pedido.probability_percent !== undefined) {
+    if (pedido.probability_percent !== null && (!Number.isInteger(pedido.probability_percent) || pedido.probability_percent < 0 || pedido.probability_percent > 100)) throw new ApiError(422, "validation_failed", undefined, deps.requestId, "Probabilidade inválida.");
+    patchDoAlvo.probability_percent = pedido.probability_percent;
+  }
 
   if (pedido.depois_de !== undefined) {
     // Só as ativas compõem a régua: arquivada não ocupa lugar no quadro.

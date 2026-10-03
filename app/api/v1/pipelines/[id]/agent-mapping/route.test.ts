@@ -258,6 +258,7 @@ describe("GET /api/v1/pipelines/[id]/agent-mapping", () => {
     expect(body.data.etapas[0]).toEqual({
       id: "e1",
       name: "Novo",
+      probability_percent: null,
       is_won: false,
       is_lost: false,
       last_change_actor_kind: null,

@@ -4349,6 +4349,7 @@ export type Database = {
           organization_id: string
           pipeline_id: string
           position: number
+          probability_percent: number | null
           requires_human: boolean
           slug: string
           updated_at: string
@@ -4369,6 +4370,7 @@ export type Database = {
           organization_id: string
           pipeline_id: string
           position: number
+          probability_percent?: number | null
           requires_human?: boolean
           slug: string
           updated_at?: string
@@ -4389,6 +4391,7 @@ export type Database = {
           organization_id?: string
           pipeline_id?: string
           position?: number
+          probability_percent?: number | null
           requires_human?: boolean
           slug?: string
           updated_at?: string
@@ -8913,6 +8916,17 @@ export type Database = {
           p_hash: string
           p_key: string
           p_request: Json
+        }
+        Returns: Json
+      }
+      fn_crm_commercial_report: {
+        Args: {
+          p_from: string
+          p_org: string
+          p_owner?: string
+          p_pipeline?: string
+          p_source?: string
+          p_to: string
         }
         Returns: Json
       }

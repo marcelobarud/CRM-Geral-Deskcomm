@@ -20,6 +20,7 @@ import { apiClient } from "@/lib/api/client";
  */
 
 export interface EtapaDoFunil {
+  probability_percent?: number | null;
   id: string;
   name: string;
   is_won: boolean;

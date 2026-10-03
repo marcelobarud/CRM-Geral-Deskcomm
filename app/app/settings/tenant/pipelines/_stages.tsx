@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { StageProbabilityEditor } from "@/components/commercial/StageProbabilityEditor";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -374,6 +375,8 @@ export function StagesSection({
                   {i + 1}.
                 </span>
 
+
+
                 {/* No empilhado, cada controle carrega o rótulo que no desktop
                     vive no cabeçalho — mesmas constantes, `sm:hidden`. */}
                 <div className="min-w-0 flex-1 space-y-1">
@@ -385,6 +388,13 @@ export function StagesSection({
                     desabilitado={ocupado}
                     aoConfirmar={(nome) => aplicar(etapa.id, { name: nome })}
                   />
+                <StageProbabilityEditor
+                  key={`${etapa.id}:${etapa.probability_percent}`}
+                  name={etapa.name}
+                  value={etapa.probability_percent ?? null}
+                  disabled={ocupado}
+                  onSave={(probability_percent) => aplicar(etapa.id, { probability_percent })}
+                />
                 </div>
 
                 {/* No empilhado o rótulo vai EM CIMA, como os outros dois: ao

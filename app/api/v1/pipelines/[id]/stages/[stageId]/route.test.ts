@@ -45,6 +45,26 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/v1/pipelines/[id]/stages/[stageId]", () => {
+  it.each([0, 50, 100, null])("grava probabilidade %s sem alterar papel ou posição", async (probability_percent) => {
+    authOk();
+    const db = makeDb({ stages: funil() });
+    const { PATCH } = await import("./route");
+    const res = await PATCH(reqPatch({ probability_percent }), ctx());
+    expect(res.status).toBe(200);
+    const writes = db.escritas.filter(w => w.table === "crm_stages");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.patch).toMatchObject({probability_percent});
+    expect(writes[0]!.patch).not.toHaveProperty("is_won");
+    expect(writes[0]!.patch).not.toHaveProperty("is_lost");
+    expect(writes[0]!.patch).not.toHaveProperty("position");
+  });
+  it.each([-1, 101, 50.5, "50"])("recusa probabilidade inválida %s antes da escrita", async (probability_percent) => {
+    authOk();
+    const db = makeDb({ stages: funil() });
+    const { PATCH } = await import("./route");
+    expect((await PATCH(reqPatch({ probability_percent }), ctx())).status).toBe(422);
+    expect(db.escritas).toEqual([]);
+  });
   it("sem auth → repassa a resposta do requireRole, sem escrever", async () => {
     vi.mocked(requireRole).mockResolvedValue({
       ok: false,

@@ -316,3 +316,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261003211000` | `0252_crm_geral_b2b_history` | Projeta auditoria do vínculo de contato na timeline existente, inclusive sem lead. |
 | `20261003212000` | `0253_crm_geral_b2b_idempotency` | Reusa ledger existente para criação idempotente; auditoria não bloqueia vínculo se falhar. |
 | `20261003213000` | `0254_crm_geral_b2b_receipts_guard` | Protege namespace do receipt B2B contra escrita direta nos grants legados do ledger, preservando outros endpoints e cascata do tenant. |
+| `20261003220000` | `0255_crm_geral_reporting_forecast` | Probabilidade nullable por etapa e read model comercial SECURITY INVOKER, cents exatos, moedas isoladas e períodos explícitos. |
