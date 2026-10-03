@@ -17,6 +17,9 @@
   ],
   "mainPath": ["leadstate", "atividades", "slot", "decisao", "fila", "leads"],
   "nodes": [
+    {"id":"forecastsettings","lane":"humano","col":1,"type":"frontend","label":"Configuração de etapas","sublabel":"probability_percent nullable, manager+"},
+    {"id":"forecastread","lane":"negocio","col":2,"type":"service","label":"fn_crm_commercial_report","sublabel":"SECURITY INVOKER: cents, moeda e período"},
+    {"id":"forecastui","lane":"humano","col":2,"type":"frontend","label":"/app/metrics: comercial","sublabel":"pipeline, forecast, ganhos/perdas e incompletude"},
     {"id":"contextocomercial","lane":"humano","col":1,"type":"frontend","label":"Contexto comercial","sublabel":"contato e dossiê: oportunidades, tarefas e agenda"},
     {"id":"tarefashumanas","lane":"negocio","col":1,"type":"database","label":"crm_tasks","sublabel":"próximo passo humano com responsável e prazo"},
     {"id":"agendacontato","lane":"negocio","col":2,"type":"database","label":"calendar_appointments","sublabel":"compromissos do contato, sem duplicação por negócio"},
@@ -55,6 +58,11 @@
     {"id":"companyhistory","lane":"barramento","col":2,"type":"api","label":"contacts/:id/timeline","sublabel":"projeta audit contact.company_changed"}
   ],
   "edges": [
+    {"id":"forecast-config-stage","from":"forecastsettings","to":"stages","label":"probabilidade inteira 0..100, autoria/audit"},
+    {"id":"forecast-stage-read","from":"stages","to":"forecastread","label":"probabilidade atual, sem IA"},
+    {"id":"forecast-lead-read","from":"leads","to":"forecastread","label":"abertos; closed_at para resultado comercial"},
+    {"id":"forecast-read-ui","from":"forecastread","to":"forecastui","label":"totais por moeda e período sob RLS"},
+    {"id":"forecast-ui-config","from":"forecastui","to":"forecastsettings","label":"configurar dados ausentes"},
     {"id":"b-context-leads","from":"contextocomercial","to":"leads","label":"consulta vínculos por organização e contato"},
     {"id":"b-context-tasks","from":"contextocomercial","to":"tarefashumanas","label":"cria e conclui próximo passo"},
     {"id":"b-tasks-activities","from":"tarefashumanas","to":"emissor","label":"registra criação e conclusão na timeline"},

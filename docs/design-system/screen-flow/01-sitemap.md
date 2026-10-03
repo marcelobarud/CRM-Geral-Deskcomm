@@ -242,3 +242,9 @@ catálogo; projeções textuais são compatibilidade derivada, não catálogo pa
 CRM → Empresas → ficha → contatos vinculados → ficha do contato.
 Contato → empresa opcional (0..1) → oportunidade/Inbox leem contexto pelo contato.
 Admin cria/edita/arquiva; agent usa o vínculo; viewer lê. Sem Pessoa ou FK direta no lead.
+
+## CRM Geral — Relatórios e Forecast / Bloco E
+
+Desempenho existente → Relatório comercial → filtros/período → totais e distribuições por moeda.
+Configurar probabilidades → Configurações/Funis → edição da etapa (manager+).
+Agent lê oportunidades visíveis via RLS; viewer recebe ausência explícita de permissão.
