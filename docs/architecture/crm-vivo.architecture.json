@@ -48,7 +48,11 @@
     { "id": "fila", "lane": "fila", "col": 4, "type": "service", "label": "job_queue · followup_turn", "sublabel": "o envio passa pelos portões" },
     { "id": "risco", "lane": "fila", "col": 5, "type": "service", "label": "classifyRisk + resolveStageWindow", "sublabel": "fonte ÚNICA de esfriamento" },
 
-    { "id": "inbox", "lane": "fora", "col": 4, "type": "frontend", "label": "agent_inbox_items", "sublabel": "demanda sem dono não mora no Kanban" }
+    { "id": "inbox", "lane": "fora", "col": 4, "type": "frontend", "label": "agent_inbox_items", "sublabel": "demanda sem dono não mora no Kanban" },
+    {"id":"companies","lane":"negocio","col":2,"type":"database","label":"crm_companies","sublabel":"empresa comercial por tenant"},
+    {"id":"companyui","lane":"negocio","col":1,"type":"frontend","label":"/app/companies","sublabel":"lista/ficha"},
+    {"id":"companycontact","lane":"negocio","col":3,"type":"database","label":"contacts.company_id","sublabel":"0..1 empresa; FK composta"},
+    {"id":"companyhistory","lane":"barramento","col":2,"type":"api","label":"contacts/:id/timeline","sublabel":"projeta audit contact.company_changed"}
   ],
   "edges": [
     {"id":"b-context-leads","from":"contextocomercial","to":"leads","label":"consulta vínculos por organização e contato"},
@@ -98,7 +102,12 @@
     { "id": "e41", "from": "atividades", "to": "chat", "label": "âncora {conversation_id, message_id}" },
     { "id": "e42", "from": "dossie", "to": "chat", "label": "clique leva ao momento" },
     { "id": "e43", "from": "dossie", "to": "atividades", "label": "editar campo deixa rastro humano" },
-    { "id": "e44", "from": "filtro", "to": "card", "label": "applyFilters decide o que aparece" }
+    { "id": "e44", "from": "filtro", "to": "card", "label": "applyFilters decide o que aparece" },
+    {"id":"b2b-ui-company","from":"companyui","to":"companies","label":"API companies: RBAC/RLS"},
+    {"id":"b2b-company-contact","from":"companies","to":"companycontact","label":"1:N contatos"},
+    {"id":"b2b-contact-lead","from":"companycontact","to":"leads","label":"lead.contact_id; contexto derivado"},
+    {"id":"b2b-contact-history","from":"companycontact","to":"companyhistory","label":"troca/remoção auditada"},
+    {"id":"b2b-history-ui","from":"companyhistory","to":"companyui","label":"ficha abre contatos e histórico"}
   ],
   "cards": [
     {

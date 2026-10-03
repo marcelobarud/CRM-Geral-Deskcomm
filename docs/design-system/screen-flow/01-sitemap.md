@@ -236,3 +236,9 @@ Contato (`/app/contacts/[id]`), dossiê da oportunidade e ficha da conversa usam
 `TagAssignmentPicker`: catálogo → vínculo contextual por UUID → chips/remoção.
 Filtros existentes de contatos, oportunidades e Inbox usam nomes atuais do mesmo
 catálogo; projeções textuais são compatibilidade derivada, não catálogo paralelo.
+
+## CRM Geral — B2B simples / Bloco D
+
+CRM → Empresas → ficha → contatos vinculados → ficha do contato.
+Contato → empresa opcional (0..1) → oportunidade/Inbox leem contexto pelo contato.
+Admin cria/edita/arquiva; agent usa o vínculo; viewer lê. Sem Pessoa ou FK direta no lead.

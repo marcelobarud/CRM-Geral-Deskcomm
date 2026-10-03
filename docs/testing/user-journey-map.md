@@ -2009,3 +2009,10 @@ CONFIRMADO em 2026-10-03: suíte Tags aprovada no Geral 1, run
 Relatório sanitizado com `passed=true` e `fixtures_cleaned=true`; consulta
 independente confirmou zero fixtures de organizações/Auth/sessões/catálogo/vínculos.
 17 screenshots locais preservadas; evidências desktop/mobile inspecionadas.
+
+## CRM Geral — B2B simples / Bloco D
+
+Suíte `start-geral-1.ps1 -Prompt -Suite B2B`, Geral 1, fixtures Auth A/B.
+Lista/ficha/formulário → contato/vínculo → oportunidade/Inbox → edição → troca/remoção → histórico → arquivamento seguro.
+Prova viewer/agent/admin/anon, FK cross-tenant inclusive service role, documento/tipo e homônimos, MFA AAL1/AAL2 e 1440×900/390×844.
+Estado e limites em `docs/B2B_SIMPLE_IMPLEMENTATION.md`; não declarar aprovado antes do resultado e limpeza reais.
