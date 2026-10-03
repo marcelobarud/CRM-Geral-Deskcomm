@@ -1,5 +1,5 @@
 ﻿[CmdletBinding()]
-param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags')][string]$Suite='D2')
+param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags','B2B')][string]$Suite='D2')
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}

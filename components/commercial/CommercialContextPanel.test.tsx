@@ -14,6 +14,9 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: () => state.result,
   useQueryClient: () => ({ invalidateQueries: state.invalidate }),
 }));
+vi.mock("@/components/companies/CompanyContactContext", () => ({
+  CompanyContactContext: () => null,
+}));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useAuth: () => ({ activeOrg: { orgId: "org" } }),
   usePermission: () => state.writable,
@@ -62,7 +65,9 @@ describe("Contexto comercial visível", () => {
     expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
     expect(screen.queryByText("Não foi possível carregar o funil padrão.")).not.toBeInTheDocument();
     rerender(<CommercialContextPanel contactId="contact" />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível carregar o funil padrão.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar o funil padrão.",
+    );
   });
   it("falha ao concluir continua visível e permite nova tentativa", async () => {
     state.result = {

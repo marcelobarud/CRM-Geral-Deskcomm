@@ -1,3 +1,4 @@
+import { verifyB2BSimple } from "./verify-b2b-simple.mjs";
 import { verifyTagsFoundation } from "./verify-tags-foundation.mjs";
 /** Homologação destrutiva SOMENTE de fixtures desta execução no staging fixo.
  * Não grava senha, token, key, sessão do navegador ou payload de rede. */
@@ -42,8 +43,9 @@ let phase = "preflight",
   storageOwner,
   passed = false;
 const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
+const b2bSuite = process.env.CRM_GERAL_VERIFY_SUITE === "B2B";
 const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
-const dir = tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const dir = b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -602,6 +604,11 @@ try {
     phase = "tags-journey";
     tagsProof = await verifyTagsFoundation({ admin, a, b, viewer, agent, anon, orgA, orgB, contact, desktop, mobile, app, dir, requireResult, insist, done });
   }
+  let b2bProof;
+  if (b2bSuite) {
+    phase = "b2b-journey";
+    b2bProof = await verifyB2BSimple({ admin, a, b, viewer, agent, anon, orgA, orgB, contact, desktop, mobile, app, dir, requireResult, insist, done });
+  }
   phase = "mfa";
   const factor = requireResult(
     await a.client.auth.mfa.enroll({ factorType: "totp", friendlyName: `d2-${run}` }),
@@ -633,6 +640,10 @@ try {
     insist((await a.client.rpc("fn_crm_tag_manage", { p_org: orgA, p_action: "create", p_name: "Sessão AAL1 bloqueada" })).error?.code === "42501", "C MFA AAL1 catálogo bloqueado");
     insist((await a.client.rpc("fn_crm_tag_assign", { p_org: orgA, p_kind: "contact", p_record: tagsProof.contact_id, p_tag: tagsProof.tag_id, p_assign: true })).error?.code === "42501", "C MFA AAL1 vínculo bloqueado");
   }
+  if (b2bSuite) {
+    insist((await a.client.rpc("fn_crm_company_manage",{p_org:orgA,p_action:"create",p_data:{name:"AAL1 bloqueada"}})).error?.code==="42501","D MFA AAL1 catálogo bloqueado");
+    insist((await a.client.from("contacts").update({company_id:b2bProof.company_id}).eq("organization_id",orgA).eq("id",b2bProof.contact_id)).error?.code==="42501","D MFA AAL1 vínculo bloqueado");
+  }
   // Uma nova janela de TOTP evita rejeição de reuso do código anterior.
   await new Promise((r) => setTimeout(r, 31000 - (Date.now() % 30000)));
   requireResult(
@@ -654,6 +665,11 @@ try {
     requireResult(await a.client.rpc("fn_crm_tag_manage", { p_org: orgA, p_action: "create", p_name: "Sessão AAL2 fictícia" }), "C MFA AAL2 catálogo permitido");
     requireResult(await a.client.rpc("fn_crm_tag_assign", { p_org: orgA, p_kind: "contact", p_record: tagsProof.contact_id, p_tag: tagsProof.tag_id, p_assign: true }), "C MFA AAL2 vínculo permitido");
     done("Bloco C: MFA real AAL1 bloqueia catálogo/vínculo e AAL2 permite ambos");
+  }
+  if (b2bSuite) {
+    requireResult(await a.client.rpc("fn_crm_company_manage",{p_org:orgA,p_action:"create",p_data:{name:"Empresa fictícia AAL2"}}),"D MFA AAL2 catálogo");
+    requireResult(await a.client.from("contacts").update({company_id:b2bProof.company_id}).eq("organization_id",orgA).eq("id",b2bProof.contact_id).select("id").single(),"D MFA AAL2 vínculo");
+    done("Bloco D: MFA real AAL1 bloqueia catálogo/vínculo e AAL2 permite ambos");
   }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
