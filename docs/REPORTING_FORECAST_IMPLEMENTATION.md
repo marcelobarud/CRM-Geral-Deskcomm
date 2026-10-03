@@ -1,8 +1,6 @@
 # CRM Geral — Bloco E: relatórios e forecast simples
 
-Checkpoint de 2026-10-03. Implementação e provas SQL concluídas;
-**homologação JWT/UI real Forecast pendente**. Não constitui aceite final nem
-autoriza iniciar o Bloco F.
+Conclusão de 2026-10-03. Implementação, provas SQL e homologação JWT/UI real Forecast aprovadas no Geral 1. Bloco F não iniciado; limitações globais e do harness Docker permanecem registradas abaixo.
 
 ## Base e auditoria
 
@@ -131,7 +129,7 @@ stage → read model → relatório → configuração e leads → resultado com
   e [arredondamento numeric](https://www.postgresql.org/docs/current/functions-math.html)
   consultados para as decisões técnicas.
 
-## Homologação real preparada
+## Homologação real concluída
 
 Iniciador `scripts/supabase/start-geral-1.ps1 -Prompt -Suite Forecast` usa apenas
 chaves em memória, campos ocultos, destino fixo Geral 1 e LOCAL_DEV_AUTH=false.
@@ -145,7 +143,19 @@ won/lost dentro/fora, own-scope agent e dados B sem influência em A.
 Jornada prepara edição pela tela/teclado → relatório → movimento → ganho pelo
 Kanban → redução do forecast/entrada no resultado; 1440×900 e 390×844, viewer.
 Limpeza final e conferência independente dos IDs do journal são obrigatórias.
-Ainda não executar o critério de saída como se essa jornada já tivesse passado.
+Execução final aprovada em 2026-10-03, run 58df9703-b1f2-4494-8501-bc3f0adb5583: JWT, UI desktop/mobile, teclado, movimento/ganho e MFA reais passaram.
+
+## Resultado final da homologação
+
+Resultado sanitizado passed=true e fixtures_cleaned=true, finalizado às
+23:05:04 UTC em 2026-10-03. Configuração pela UI, relatórios 1440×900 e 390×844,
+viewer negado, cálculos exatos, isolamento A/B, mudança de etapa, ganho e MFA
+AAL1/AAL2 aprovados. Capturas da execução revisadas; artefatos locais ignorados
+em .local-dev/bloco-e, sem credenciais ou traces persistidos.
+Consulta independente por IDs do journal: organizações, leads, pipelines,
+stages, usuários Auth e sessões = zero em todas as categorias.
+Tentativas anteriores abaixo são histórico de diagnóstico, superado pela
+execução final; não representam pendências atuais de homologação.
 
 Primeira execução real (2026-10-03): base D2 passou; Forecast interrompido na
 criação das etapas fictícias, código 23502. O lote misturava flags de ganho/perda
@@ -174,11 +184,11 @@ Jornada visual completa, movimento/ganho e MFA final continuam pendentes.
 
 ## Gaps e Git
 
-P0: nenhum identificado nas provas concluídas; aceite completo ainda pendente.
-P1: homologação JWT/UI Forecast e cleanup independente da suíte real.
+P0: nenhum identificado nas provas concluídas.
+P1: nenhum pendente no escopo homologado.
 P2: regressão global histórica, marca pública upstream e funil Pedidos/Pago,
 fora do escopo. P3: harness Docker/pg15 complementar e avaliação de volume real.
-Bloco F não iniciado. Prontidão depende da homologação Forecast.
+Bloco F não iniciado. Bloco E homologado; próxima fase depende de instrução do usuário.
 
 Worktree rastreada deve terminar limpa; E sem push/merge/rebase.
 docs/DESKCOMM_UPSTREAM_AUDIT.md não rastreado preservado, SHA256
