@@ -321,6 +321,9 @@ export async function createLeadHandler(
     .select(LEAD_COLS)
     .single();
 
+  if (insErr?.code === "23503") {
+    throw new ApiError(422, "validation_failed", undefined, ctx.requestId, "Referência comercial inválida.");
+  }
   if (insErr || !lead) {
     throw new ApiError(
       500,
@@ -448,6 +451,9 @@ export async function updateLeadHandler(
     .select(LEAD_COLS)
     .maybeSingle();
 
+  if (updErr?.code === "23503") {
+    throw new ApiError(422, "validation_failed", undefined, ctx.requestId, "Referência comercial inválida.");
+  }
   if (updErr) {
     throw new ApiError(500, "internal_error", undefined, ctx.requestId, updErr.message);
   }

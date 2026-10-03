@@ -304,3 +304,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261003010000` | `0240_crm_geral_capacidades` | Configuração organizacional atômica, guards de habilitação e RLS restritiva de respostas rápidas, preservando SELECT histórico. |
 | `20261003011000` | `0241_crm_geral_capacidades_grants` | Revoga o grant herdado de default privileges para escrita administrativa por service_role. |
 | `20261003012000` | `0242_crm_geral_capacidades_namespace` | Preserva namespace canônico perante snapshots antigos de outros donos de settings. |
+| `20261003140000` | `0243_crm_geral_relacoes_comerciais` | Valida tenant de contato/funil/etapa/responsável e vínculos de tarefa, sem ampliar RLS ou duplicar entidades. |
