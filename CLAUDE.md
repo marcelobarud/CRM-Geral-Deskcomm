@@ -6,7 +6,7 @@ Contratos de produto herdados abaixo permanecem até decisão explícita; sua pr
 
 ## Contexto de execução
 
-O desenvolvimento deste fork usa PostgreSQL local, documentado em [LOCAL_POSTGRES_SETUP.md](docs/LOCAL_POSTGRES_SETUP.md). Supabase Cloud não é requisito local. Auth, Storage, Realtime e RLS permanecem contratos arquiteturais da distribuição planejada; o adaptador local tem limitações documentadas e não prova todas essas capacidades.
+O ambiente principal de desenvolvimento/homologação é o Supabase **Geral 1**, com Auth, RLS, Storage e Realtime reais e `LOCAL_DEV_AUTH=false`; veja [LOCAL_RUNTIME_TRANSITION.md](docs/LOCAL_RUNTIME_TRANSITION.md). PostgreSQL local permanece como fallback/regressão/diagnóstico, documentado em [LOCAL_POSTGRES_SETUP.md](docs/LOCAL_POSTGRES_SETUP.md). O adaptador local tem limitações documentadas; a homologação do staging não comprova a distribuição comercial de produção.
 
 Versões e comandos: `package.json`; Node ≥22 e pnpm canônico. Configuração Tailwind atual em `app/globals.css` (CSS-first). Tag do WAHA e demais imagens: compose versionado. Leia documentação instalada do Next antes de escrever código.
 
