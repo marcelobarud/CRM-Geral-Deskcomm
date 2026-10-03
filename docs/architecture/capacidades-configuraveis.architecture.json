@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Capacidades configuráveis do CRM Geral",
+    "subtitle": "Suporte, habilitação, autorização e prontidão independentes",
+    "output": "capacidades-configuraveis.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "app", "label": "Aplicativo" },
+    { "id": "db", "label": "Banco" },
+    { "id": "humano", "label": "Pessoa" }
+  ],
+  "mainPath": ["config", "rpc", "settings", "guard", "portas", "audit"],
+  "nodes": [
+    {
+      "id": "config",
+      "lane": "humano",
+      "col": 1,
+      "type": "ui",
+      "label": "Configurações › Módulos e capacidades"
+    },
+    {
+      "id": "rpc",
+      "lane": "app",
+      "col": 2,
+      "type": "service",
+      "label": "PATCH admin + MFA/suporte; fn_set_capability atômica"
+    },
+    {
+      "id": "settings",
+      "lane": "db",
+      "col": 3,
+      "type": "service",
+      "label": "organizations.settings.capabilities; namespace protegido"
+    },
+    {
+      "id": "registry",
+      "lane": "app",
+      "col": 1,
+      "type": "service",
+      "label": "Registry da release: respostas rápidas, default ligado"
+    },
+    {
+      "id": "guard",
+      "lane": "app",
+      "col": 4,
+      "type": "service",
+      "label": "Resolver + requireRole + guard fresco antes de efeito"
+    },
+    {
+      "id": "portas",
+      "lane": "app",
+      "col": 5,
+      "type": "service",
+      "label": "REST message-templates e tools MCP list/render"
+    },
+    {
+      "id": "rls",
+      "lane": "db",
+      "col": 5,
+      "type": "service",
+      "label": "RLS original + flag restritiva em INSERT/UPDATE/DELETE"
+    },
+    {
+      "id": "ui",
+      "lane": "humano",
+      "col": 4,
+      "type": "ui",
+      "label": "Read model único: navegação, composer e histórico autorizado"
+    },
+    {
+      "id": "audit",
+      "lane": "db",
+      "col": 6,
+      "type": "service",
+      "label": "api_audit_log: capability.config_changed"
+    },
+    {
+      "id": "revisao",
+      "lane": "humano",
+      "col": 7,
+      "type": "ui",
+      "label": "Admin audit e correção de habilitação"
+    }
+  ],
+  "edges": [
+    { "from": "config", "to": "rpc", "label": "escolha humana sem org no body" },
+    { "from": "rpc", "to": "settings", "label": "lock, merge de namespace e revisão" },
+    { "from": "settings", "to": "guard", "label": "leitura sem cache e filtro de organização" },
+    { "from": "registry", "to": "guard", "label": "suporte e default da release" },
+    { "from": "guard", "to": "portas", "label": "execute bloqueado se não efetivo" },
+    { "from": "settings", "to": "rls", "label": "fn_capability_enabled" },
+    { "from": "portas", "to": "rls", "label": "organização, papel e autoria continuam aplicados" },
+    { "from": "guard", "to": "ui", "label": "GET capabilities sem secrets" },
+    { "from": "ui", "to": "portas", "label": "uso ou history explícito; backend revalida" },
+    { "from": "ui", "to": "config", "label": "estado e motivo orientam próximo passo" },
+    { "from": "rpc", "to": "audit", "label": "ator, organização, antes/depois e revisão" },
+    { "from": "audit", "to": "revisao", "label": "filtro derivado de AUDIT_ACTIONS" },
+    { "from": "revisao", "to": "config", "label": "correção pelo mecanismo canônico" }
+  ]
+}
