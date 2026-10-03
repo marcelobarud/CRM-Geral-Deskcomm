@@ -1,7 +1,7 @@
 # CRM Geral — Bloco C: tags estruturais
 
-Estado de implementação em 2026-10-03. Este relatório é um checkpoint verificável;
-a homologação com JWT reais e evidências visuais ainda depende da suíte Tags.
+Estado de implementação em 2026-10-03. CONFIRMADO: a suíte Tags passou no Geral 1,
+com JWT reais, jornada visual e limpeza das fixtures conferida independentemente.
 A prova SQL final confirmou também a proteção de configurações com nomes na
 grafia normalizada legada, sem modificar a RLS de organizações.
 
@@ -161,27 +161,41 @@ de índices recém-criados sem uso; não foram retirados os índices de integrid
 para esconder o aviso. [Índice ainda sem uso](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 Avisos históricos fora do Bloco C não foram alterados.
 
-Homologação pendente: executar o iniciador com `-Prompt -Suite Tags`, chaves só em
-memória/campos ocultos. A suíte usa Auth real A/B, viewer/agent/admin/anon, RLS,
-cross-tenant inclusive service role, jornada visual nas três telas/filtros,
-rename/merge/delete, teclado/foco e screenshots 1440×900/390×844. Relatório em
-`.local-dev/bloco-c/result.json`. `fixtures_cleaned=true` só após confirmação do
-próprio finalizador. O rollback SQL já foi comprovado; **não há ainda resultado
-aprovado dessa execução real de Auth/UI no Bloco C**.
+CONFIRMADO: homologação `-Prompt -Suite Tags`, run
+`8c754776-184b-472c-b82c-99a32a962b77`, concluída em
+`2026-10-03T20:25:34.949Z`. O relatório `.local-dev/bloco-c/result.json` registra
+`passed=true`, dez checks aprovados e `fixtures_cleaned=true`; o journal corresponde
+à mesma execução. Auth real A/B, viewer/agent/admin/anon, RLS, negação cross-tenant
+inclusive estrutural/service role, catálogo e jornada nas três telas/filtros,
+rename/merge/delete, teclado/foco e MFA AAL1/AAL2 passaram. AAL1 bloqueou catálogo
+e vínculo; AAL2 permitiu ambos. As chaves foram consumidas somente em memória.
+
+Foram preservadas 17 screenshots em `.local-dev/bloco-c/`, com viewports
+1440×900/390×844. A inspeção visual cobriu contato atribuído e filtrado no desktop,
+chips longos e viewer no mobile, ficha da conversa, dossiê da oportunidade e
+confirmações mobile de merge/exclusão. Os controles de tags e diálogos inspecionados
+permaneceram legíveis e dentro da largura disponível; viewer não apresentou remoção.
+Essas evidências usam somente registros fictícios. A captura do dossiê é parcial;
+a interação com suas tags foi verificada pela jornada executável.
+
+Consulta independente no Geral 1, restrita aos IDs do journal, confirmou zero
+organizações, usuários Auth, sessões Auth, tags, aliases e atribuições das fixtures.
+Nenhuma limpeza adicional ou consulta a dados comerciais reais foi necessária.
+O aceite refere-se ao staging Geral 1, sem declarar implantação em produção.
 
 ## Gaps e próximo passo
 
-- P0: nenhum identificado nos checks executados; não é declaração de homologação
-  completa.
-- P1: falta confirmar a suíte real Tags/limpeza e inspecionar suas evidências
-  visuais. Bloco C permanece pendente até essa prova.
+- P0: nenhum identificado no escopo de tags homologado no Geral 1.
+- P1: nenhum aberto no escopo de tags após a suíte real, inspeção visual e
+  confirmação independente de limpeza.
 - P2: branding público histórico e funil Pedidos/Pago permanecem fora do escopo;
   dívidas anteriores da suíte global serão discriminadas no fechamento.
 - P3: ambiente sem Docker para compatibilidade install/update pg15; avisos
   informativos do Advisor e manutenção futura da transição textual conforme o
   critério descrito, sem novo motor ou relatório avançado.
 
-Não iniciar Bloco D. Prontidão depende de encerrar a homologação de tags. Nenhuma
+Critério de saída do Bloco C cumprido para iniciar o Bloco D — B2B simples quando
+autorizado pelo usuário; nenhuma implementação do próximo bloco foi iniciada. Nenhuma
 branch ou funcionalidade dos Blocos D/E/campanhas foi criada. O arquivo
 `docs/DESKCOMM_UPSTREAM_AUDIT.md` permanece não rastreado, fora dos commits e sem
 alteração; SHA-256 preservado

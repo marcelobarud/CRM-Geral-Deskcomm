@@ -2003,3 +2003,9 @@ Fonte executável: `scripts/supabase/verify-tags-foundation.mjs`, iniciador
 | Finalização | `fixtures_cleaned=true` somente após remoção de orgs, usuários e sessões próprios |
 
 Status da execução real e evidências ficam em `docs/TAGS_FOUNDATION_IMPLEMENTATION.md`.
+
+CONFIRMADO em 2026-10-03: suíte Tags aprovada no Geral 1, run
+`8c754776-184b-472c-b82c-99a32a962b77`, dez checks incluindo MFA real AAL1/AAL2.
+Relatório sanitizado com `passed=true` e `fixtures_cleaned=true`; consulta
+independente confirmou zero fixtures de organizações/Auth/sessões/catálogo/vínculos.
+17 screenshots locais preservadas; evidências desktop/mobile inspecionadas.
