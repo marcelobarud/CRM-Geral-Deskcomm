@@ -1,4 +1,5 @@
 "use client";
+import { formatCents } from "@/lib/money";
 import { Draggable } from "@hello-pangea/dnd";
 import type { MouseEvent } from "react";
 import { useT } from "@/hooks/i18n/useT";
@@ -46,17 +47,7 @@ interface KanbanCardProps {
 }
 
 function formatBRL(cents: number | null, currency: string | null): string | null {
-  if (cents == null) return null;
-  const code = currency ?? "BRL";
-  try {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits: 0,
-    }).format(cents / 100);
-  } catch {
-    return `${(cents / 100).toFixed(2)} ${code}`;
-  }
+  return cents === null ? null : formatCents(cents, currency ?? "BRL");
 }
 
 /**
@@ -122,7 +113,12 @@ export function KanbanCard({
     }
     onOpen?.(card.id);
   };
-  const handleClick = (e: MouseEvent<HTMLDivElement>) => decidirClique(e);
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Portais de edição/perda continuam na árvore React do card. Seus cliques
+    // não pertencem ao card e não devem abrir o dossiê sobre o diálogo ativo.
+    if (!e.currentTarget.contains(e.target as Node)) return;
+    decidirClique(e);
+  };
 
   return (
     <Draggable draggableId={card.id} index={index}>
