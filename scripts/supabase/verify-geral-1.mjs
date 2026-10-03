@@ -1,5 +1,6 @@
 /** Homologação destrutiva SOMENTE de fixtures desta execução no staging fixo.
  * Não grava senha, token, key, sessão do navegador ou payload de rede. */
+import { verifyCommercialJourney } from "./verify-commercial-journey.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { chromium } from "@playwright/test";
 import { randomUUID, randomBytes, createHmac } from "node:crypto";
@@ -39,7 +40,8 @@ let phase = "preflight",
   storagePath,
   storageOwner,
   passed = false;
-const dir = ".local-dev/d2";
+const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
+const dir = commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -109,6 +111,11 @@ function totp(base32) {
   return String((digest.readUInt32BE(offset) & 0x7fffffff) % 1000000).padStart(6, "0");
 }
 await mkdir(dir, { recursive: true });
+// O resultado anterior não deve parecer pertencer à execução em andamento.
+await writeFile(`${dir}/result.json`, JSON.stringify({
+  project: "Geral 1", run, passed: false, phase: "preflight", in_progress: true,
+  fixtures_cleaned: false, fixtures_created: false,
+}, null, 2));
 try {
   try {
     await fetch(app, { signal: AbortSignal.timeout(1000) });
@@ -147,6 +154,11 @@ try {
     b = await session("admin", orgB),
     viewer = await session("viewer", orgA),
     agent = await session("agent", orgA);
+  // Somente IDs de fixtures próprias, para recuperação após interrupção externa.
+  await writeFile(`${dir}/fixture-journal.json`, JSON.stringify({
+    project: "Geral 1", run, fixture_organizations: [orgA, orgB],
+    fixture_users: users, fixtures_cleaned: false,
+  }, null, 2));
   requireResult(await a.client.auth.refreshSession(), "refresh");
   done("Auth real: bootstrap, login, getUser e refresh");
   phase = "rls-rest";
@@ -425,7 +437,14 @@ try {
       .single(),
     "atualização Realtime",
   );
-  for (let i = 0; i < 40 && !seenA; i++) await new Promise((r) => setTimeout(r, 250));
+  // Join aceito não garante que a réplica já publicou o primeiro evento.
+  // Reenvios limitados continuam exigindo UPDATE real e negação de B.
+  for (let i = 0; i < 120 && !seenA; i++) {
+    if (i === 40 || i === 80) {
+      requireResult(await a.client.from("crm_leads").update({ title: `Oportunidade fictícia D2 atualizada ${i}` }).eq("organization_id", orgA).eq("id", lead).select("id").single(), "reenvio Realtime");
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
   await new Promise((r) => setTimeout(r, 1500));
   insist(seenA > 0, "Realtime evento autorizado A");
   insist(seenB === 0, "Realtime isolamento B");
@@ -555,6 +574,27 @@ try {
     "adapter Auth local ativo",
   );
   done("App contra Geral 1: jornada, API, teclado/foco, 1440x900 e 390x844, viewer");
+  if (commercialSuite) {
+    phase = "commercial-journey";
+    await verifyCommercialJourney({
+      admin,
+      a,
+      b,
+      viewer,
+      agent,
+      anon,
+      orgA,
+      orgB,
+      contact,
+      desktop,
+      mobile,
+      app,
+      dir,
+      requireResult,
+      insist,
+      done,
+    });
+  }
   phase = "mfa";
   const factor = requireResult(
     await a.client.auth.mfa.enroll({ factorType: "totp", friendlyName: `d2-${run}` }),
@@ -601,7 +641,8 @@ try {
   );
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
-} catch {
+} catch (error) {
+  if (!failureReason && error?.name === "TimeoutError") failureReason = "browser_timeout";
   process.stderr.write(`D2 interrompida na etapa: ${phase}. Nenhuma credencial foi registrada.\n`);
   process.exitCode = 1;
 } finally {
@@ -659,5 +700,9 @@ try {
       2,
     ),
   );
+  await writeFile(`${dir}/fixture-journal.json`, JSON.stringify({
+    project: "Geral 1", run, fixture_organizations: [orgA, orgB],
+    fixture_users: users, fixtures_cleaned: cleaned,
+  }, null, 2));
   process.stdout.write(`Relatório sanitizado: ${dir}/result.json\n`);
 }

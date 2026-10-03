@@ -1,9 +1,9 @@
 ﻿[CmdletBinding()]
-param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt)
+param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial')][string]$Suite='D2')
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}
-$names=@('NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_DB_URL','LOCAL_DEV_AUTH','LOCAL_DEV_AUTH_PASSWORD','LOCAL_DEV_AUTH_SECRET','NEXT_PUBLIC_APP_URL','D2_SUPABASE_STAGING_ACK')
+$names=@('NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_DB_URL','LOCAL_DEV_AUTH','LOCAL_DEV_AUTH_PASSWORD','LOCAL_DEV_AUTH_SECRET','NEXT_PUBLIC_APP_URL','D2_SUPABASE_STAGING_ACK','CRM_GERAL_VERIFY_SUITE')
 foreach($name in $names){$previous[$name]=[Environment]::GetEnvironmentVariable($name,'Process')}
 function Read-HiddenValue([string]$Label){
   $credential=[PSCredential]::new('runtime',(Read-Host $Label -AsSecureString))
@@ -20,6 +20,7 @@ try{
   $env:LOCAL_DEV_AUTH_SECRET=''
   $env:SUPABASE_DB_URL=''
   $env:D2_SUPABASE_STAGING_ACK='Geral 1'
+  $env:CRM_GERAL_VERIFY_SUITE=$Suite
   Push-Location -LiteralPath $repo
   try{
     if($Mode -eq 'Verify'){
@@ -29,7 +30,7 @@ try{
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3000'
       & node (Join-Path $repo 'node_modules/next/dist/bin/next') dev -p 3000
     }
-    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte somente o relatório sanitizado em .local-dev/d2/result.json.'}
+    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2) ou .local-dev/bloco-b/result.json (Commercial).'}
   }finally{Pop-Location}
 }finally{
   foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}

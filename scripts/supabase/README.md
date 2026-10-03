@@ -14,6 +14,19 @@ A homologação cria organizações e usuários fictícios exclusivos desta exec
 
 Resultados sanitizados e capturas ficam em `.local-dev/d2/`, ignorado pelo Git. Não são gravados HAR, trace, sessão do navegador, senha, token, segredo TOTP ou saída bruta do servidor. O relatório `result.json` contém etapa, último check, código de erro restrito e resultado de limpeza. A execução exige Node do projeto, dependências instaladas, Chrome e porta 3002 livre. Outro `next dev` no mesmo checkout também pode disputar o lock do Next; encerre sua própria execução antes de iniciar a homologação.
 
+Para homologar também a jornada comercial do Bloco B:
+
+```powershell
+.\scripts\supabase\start-geral-1.ps1 -Prompt -Suite Commercial
+```
+
+`Commercial` executa a D2 e os testes de contato, relacionamento em preparação
+com tarefa humana, oportunidade, responsável, origem/moeda/centavos, próxima
+tarefa, agenda interna, ganho/perda e histórico. Usa JWT reais A/B, viewer,
+agent, anon e service role para testar referências comerciais. Resultados e
+capturas ficam em `.local-dev/bloco-b/`; a limpeza segue os mesmos IDs exclusivos.
+Sem `-Suite Commercial`, o comando executa somente a D2.
+
 Para abrir o app usando o mesmo mecanismo de entrada oculta:
 
 ```powershell
