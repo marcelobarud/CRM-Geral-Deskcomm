@@ -24,6 +24,7 @@ import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useMessageTemplates, type MessageTemplate } from "@/hooks/inbox/useMessageTemplates";
 import { TemplateFormDialog } from "./TemplateFormDialog";
+import { useCapability } from "@/hooks/capabilities/CapabilitiesProvider";
 
 const TEMPLATES_KEY = ["message-templates"];
 
@@ -34,7 +35,9 @@ interface Props {
 
 export function TemplatesClient({ canShare, currentUserId }: Props) {
   const t = useT();
-  const { data: templates, isLoading } = useMessageTemplates();
+  const { data: templates, isLoading } = useMessageTemplates(true);
+  const capability = useCapability("message_templates");
+  const readOnly = !capability?.can_execute;
   const qc = useQueryClient();
   const del = useMutation({
     mutationFn: async (id: string) => apiClient.delete(`/api/v1/message-templates/${id}`),
@@ -45,10 +48,12 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
   const [editing, setEditing] = React.useState<MessageTemplate | null>(null);
 
   const openNew = () => {
+    if (readOnly) return;
     setEditing(null);
     setFormOpen(true);
   };
   const openEdit = (template: MessageTemplate) => {
+    if (readOnly) return;
     setEditing(template);
     setFormOpen(true);
   };
@@ -64,8 +69,9 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
 
   return (
     <div className="space-y-4">
+      {readOnly && <p role="status" className="text-sm text-muted-foreground">{t(capability?.reason ?? "Consultando disponibilidade.")} {t("Consulta dos registros existentes, sem edição.")}</p>}
       <div className="flex sm:justify-end">
-        <Button type="button" onClick={openNew} className="w-full sm:w-auto">
+        <Button type="button" disabled={readOnly} onClick={openNew} className="w-full sm:w-auto">
           <Plus /> {t("Novo template")}
         </Button>
       </div>
@@ -94,7 +100,7 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
                   </div>
                   <p className="line-clamp-2 text-sm text-muted-foreground">{template.body}</p>
                 </div>
-                {canModify && (
+                {canModify && !readOnly && (
                   <div className="flex shrink-0 gap-1">
                     <Button
                       type="button"
@@ -145,7 +151,7 @@ export function TemplatesClient({ canShare, currentUserId }: Props) {
         </ul>
       )}
       <TemplateFormDialog
-        open={formOpen}
+        open={formOpen && !readOnly}
         onOpenChange={setFormOpen}
         canShare={canShare}
         template={editing}

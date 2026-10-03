@@ -11,7 +11,7 @@ import { type NextRequest } from "next/server";
 
 import { audit } from "@/lib/audit";
 import { fail, ok } from "@/lib/api/wrappers";
-import { requireRole } from "@/lib/auth/require-role";
+import { requireCapability } from "@/lib/capabilities/server";
 import { roleAtLeast } from "@/lib/auth/types";
 import { createTemplateSchema } from "@/lib/schemas/templates";
 import { createClient } from "@/lib/supabase/server";
@@ -22,7 +22,7 @@ const COLS = "id, organization_id, owner_user_id, title, body, shortcut, created
 
 export async function GET(_req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "message_templates" });
+  const authz = await requireCapability("message_templates", "agent", _req.nextUrl.searchParams.get("history") === "1" ? "history" : "execute");
   if (!authz.ok) return authz.response;
   const { org } = authz;
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (supportDenied) return supportDenied;
 
   const requestId = randomUUID();
-  const authz = await requireRole("agent", { requestId, resource: "message_templates" });
+  const authz = await requireCapability("message_templates", "agent");
   if (!authz.ok) return authz.response;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user, org } = authz;

@@ -1,4 +1,6 @@
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import { capabilityDestinations } from "@/lib/capabilities/presentation";
+import type { EffectiveCapability } from "@/lib/capabilities/registry";
 
 import { type Role } from "@/lib/auth/types";
 import {
@@ -109,9 +111,10 @@ export function sidebarGroups(
   isPlatformAdmin: boolean,
   role: Role | null,
   settings?: InterfaceSettings,
+  capabilities?: EffectiveCapability[],
 ): Array<{ group: NavGroup; items: NavDestination[] }> {
   const visible = new Set<string>(
-    destinosDaInterface(settings, isPlatformAdmin, role).map((d) => d.href),
+    capabilityDestinations(destinosDaInterface(settings, isPlatformAdmin, role), capabilities).map((d) => d.href),
   );
   return NAV_GROUPS.map((group) => ({
     group,
@@ -137,10 +140,11 @@ export function hubSections(
   isPlatformAdmin: boolean,
   role: Role | null,
   settings?: InterfaceSettings,
+  capabilities?: EffectiveCapability[],
 ): Array<{ section: string; items: NavDestination[] }> {
   const porSecao = new Map<string, NavDestination[]>();
   const visible = new Set<string>(
-    destinosDaInterface(settings, isPlatformAdmin, role).map((d) => d.href),
+    capabilityDestinations(destinosDaInterface(settings, isPlatformAdmin, role), capabilities).map((d) => d.href),
   );
   for (const d of NAV_DESTINATIONS) {
     if (d.group !== group || !visible.has(d.href)) continue;
@@ -157,9 +161,10 @@ export function searchable(
   isPlatformAdmin: boolean,
   role: Role | null,
   settings?: InterfaceSettings,
+  capabilities?: EffectiveCapability[],
 ): NavDestination[] {
   const visible = new Set<string>(
-    destinosDaInterface(settings, isPlatformAdmin, role).map((d) => d.href),
+    capabilityDestinations(destinosDaInterface(settings, isPlatformAdmin, role), capabilities).map((d) => d.href),
   );
   return NAV_DESTINATIONS.filter((d) => visible.has(d.href));
 }

@@ -23,6 +23,7 @@
  * `lib/operacao/` para o porquê de cada uma.
  */
 import { z } from "zod";
+import { assertCapability } from "@/lib/capabilities/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptWebhookSecret } from "@/lib/webhooks/secrets";
@@ -225,6 +226,7 @@ export const crmListMessageTemplates: McpToolDefinition<typeof listTemplatesShap
   requiresRole: "agent",
   requiresScope: "mcp:read",
   handler: async (_input, ctx) => {
+    await assertCapability(ctx.supabase, ctx.organizationId, "message_templates", ctx.role);
     return { modelos: await listarModelosDeMensagem(deps(ctx)) };
   },
 };
@@ -246,6 +248,7 @@ export const crmRenderMessageTemplate: McpToolDefinition<typeof renderTemplateSh
   requiresRole: "agent",
   requiresScope: "mcp:read",
   handler: async (input, ctx) => {
+    await assertCapability(ctx.supabase, ctx.organizationId, "message_templates", ctx.role);
     return preencherModeloDeMensagem(deps(ctx), {
       templateId: input.template_id,
       contactId: input.contact_id,

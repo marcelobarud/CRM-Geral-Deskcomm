@@ -1,4 +1,7 @@
 import { InterfaceRefresh } from "@/hooks/auth/InterfaceRefresh";
+import { CapabilitiesProvider } from "@/hooks/capabilities/CapabilitiesProvider";
+import { loadCapabilities } from "@/lib/capabilities/server";
+import { roleAtLeast } from "@/lib/auth/types";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { isMfaEnrolled, loadAuthUser, requiresMfa, resolveActiveOrg } from "@/lib/auth/server";
@@ -153,6 +156,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppShell sidebarCollapsed={collapsed}>{children}</AppShell>
     </VoiceCallProvider>
   );
+  const initialCapabilities = activeOrg ? {
+    organization_id: activeOrg.orgId,
+    can_manage: roleAtLeast(activeOrg.role, "admin") && (!user.support || user.support.access_mode === "full"),
+    capabilities: await loadCapabilities(createAdminClient(), activeOrg.orgId, activeOrg.role).catch(() => []),
+  } : null;
 
   return (
     // O idioma envolve a árvore inteira e recebe o código PRONTO — ele não
@@ -160,6 +168,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // acoplamento com a autenticação que derrubou 32 casos.
     <IdiomaProvider locale={user.idioma}>
     <AuthProvider user={user} activeOrg={activeOrg}>
+      <CapabilitiesProvider initial={initialCapabilities}>
       <InterfaceRefresh userId={user.id} org={activeOrg} support={!!user.support} />
       {/*
         O MARCADOR da marca da organização — o elemento cuja existência define o
@@ -189,6 +198,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           shell
         )}
       </div>
+      </CapabilitiesProvider>
     </AuthProvider>
     </IdiomaProvider>
   );

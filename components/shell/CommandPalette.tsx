@@ -8,6 +8,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { MagnifyingGlass } from "@/lib/ui/icons";
 import { NAV_GROUPS, searchable, type NavDestination } from "@/lib/navigation/registry";
 import { cn } from "@/lib/utils";
+import { useCapabilities } from "@/hooks/capabilities/CapabilitiesProvider";
 
 /**
  * Paleta de navegação (⌘K).
@@ -51,6 +52,7 @@ function Resultados({ aoEscolher }: { aoEscolher: () => void }) {
   const t = useT();
   const router = useRouter();
   const { user, activeOrg } = useAuth();
+  const capabilities = useCapabilities();
   const [busca, setBusca] = useState("");
   const [destacado, setDestacado] = useState(0);
 
@@ -60,8 +62,9 @@ function Resultados({ aoEscolher }: { aoEscolher: () => void }) {
         user.is_platform_admin && !user.support,
         activeOrg?.role ?? null,
         activeOrg?.interface_settings,
+        capabilities?.capabilities ?? [],
       ),
-    [user.is_platform_admin, user.support, activeOrg?.role, activeOrg?.interface_settings],
+    [user.is_platform_admin, user.support, activeOrg?.role, activeOrg?.interface_settings, capabilities],
   );
 
   const resultados = useMemo(() => {

@@ -1,3 +1,5 @@
+"use client";
+import { useCapabilities } from "@/hooks/capabilities/CapabilitiesProvider";
 import type { InterfaceSettings } from "@/lib/navigation/interface";
 import Link from "next/link";
 
@@ -58,7 +60,8 @@ export function NavHub({
   interfaceSettings,
   locale = IDIOMA_PADRAO,
 }: NavHubProps) {
-  const secoes = hubSections(group, isPlatformAdmin, role, interfaceSettings);
+  const capabilities = useCapabilities();
+  const secoes = hubSections(group, isPlatformAdmin, role, interfaceSettings, capabilities?.capabilities ?? []);
 
   return (
     <div className="flex h-full flex-col gap-8 p-6">

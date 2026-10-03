@@ -655,6 +655,14 @@ export const NAV_CATALOG = [
     minRole: "admin",
   },
   {
+    href: "/app/settings/capabilities",
+    label: "Módulos e capacidades",
+    description: "Consultar disponibilidade e administrar a habilitação para esta organização.",
+    icon: "PuzzlePiece",
+    group: "organizacao",
+    section: "Sua empresa",
+  },
+  {
     href: "/app/lgpd/requests",
     label: "LGPD",
     description: "Pedidos de exportação e exclusão de dados feitos por clientes.",

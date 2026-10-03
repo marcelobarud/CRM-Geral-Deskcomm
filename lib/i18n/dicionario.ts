@@ -37,6 +37,25 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Módulos e capacidades": { es: "Módulos y capacidades" },
+  "Disponibilidade para esta organização. Desativar preserva os dados existentes.": { es: "Disponibilidad para esta organización. Desactivar conserva los datos existentes." },
+  "Somente um administrador pode alterar a habilitação.": { es: "Solo un administrador puede cambiar la habilitación." },
+  "Consultando disponibilidade…": { es: "Consultando disponibilidad…" },
+  "Consultando disponibilidade.": { es: "Consultando disponibilidad." },
+  "Atualizar disponibilidade": { es: "Actualizar disponibilidad" },
+  "Consulta dos registros existentes, sem edição.": { es: "Consulta de los registros existentes, sin edición." },
+  "Habilitação atualizada. Os dados existentes foram preservados.": { es: "Habilitación actualizada. Los datos existentes se conservaron." },
+  "Criar e usar respostas salvas, pessoais ou da equipe.": { es: "Crear y usar respuestas guardadas, personales o del equipo." },
+  "Indisponível nesta release": { es: "No disponible en esta versión" },
+  "Habilitado, falta configurar": { es: "Habilitado, falta configurar" },
+  "Disponibilidade limitada": { es: "Disponibilidad limitada" },
+  "Esta release não oferece essa capacidade.": { es: "Esta versión no ofrece esa capacidad." },
+  "Configuração incompatível. Revise a habilitação com um administrador.": { es: "Configuración incompatible. Revise la habilitación con un administrador." },
+  "Desativada nesta organização. Os dados existentes foram preservados.": { es: "Desactivada en esta organización. Los datos existentes se conservaron." },
+  "A integração necessária ainda não foi configurada.": { es: "La integración necesaria aún no se ha configurado." },
+  "A integração está indisponível no momento.": { es: "La integración no está disponible en este momento." },
+  "Seu papel não permite utilizar esta capacidade.": { es: "Su rol no permite utilizar esta capacidad." },
+  "Não foi possível atualizar a configuração.": { es: "No fue posible actualizar la configuración." },
   "números de teste autorizados": { es: "números de prueba autorizados" },
   "1 número de teste autorizado": { es: "1 número de prueba autorizado" },
   "Nenhum número autorizado — a IA não responde ninguém neste canal.": {
