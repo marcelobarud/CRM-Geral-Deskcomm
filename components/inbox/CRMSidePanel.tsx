@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type { ConversationWithContact } from "@/hooks/inbox/useConversationsRealtime";
 import { activityLabel, actorLabel, actorShape } from "@/lib/leads/activity-vocabulary";
 import { ConversationTagsEditor } from "./ConversationTagsEditor";
+import { CompanyContactContext } from "@/components/companies/CompanyContactContext";
 import { ContactTagsEditor } from "./ContactTagsEditor";
 import { useDefaultPipeline } from "@/hooks/pipelines/useDefaultPipeline";
 import { NewLeadDialog } from "@/components/kanban/NewLeadDialog";
@@ -593,6 +594,7 @@ export function CRMSidePanel({ conversation }: Props) {
               </Button>
             )}
           </div>
+          {contactId && <CompanyContactContext contactId={contactId} />}
           {tagEditorOpen && contactId && <ContactTagsEditor contactId={contactId} tags={tags} />}
         </Card>
       </section>

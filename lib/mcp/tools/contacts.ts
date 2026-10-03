@@ -85,7 +85,10 @@ export const crmGetContact: McpToolDefinition<typeof getInputShape> = {
       },
       { contactId: input.contact_id, decryptPurpose: null },
     );
+    const company = contact.company_id ? await ctx.supabase.from("crm_companies").select("id,name").eq("organization_id",ctx.organizationId).eq("id",contact.company_id).maybeSingle() : null;
+    if(company?.error) throw new Error("Contexto empresarial indisponível.");
     return {
+      company: company?.data ?? null,
       id: contact.id,
       name: contact.name,
       display_name: contact.display_name,

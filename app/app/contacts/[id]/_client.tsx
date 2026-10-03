@@ -1,4 +1,5 @@
 "use client";
+import { CompanyContactContext } from "@/components/companies/CompanyContactContext";
 import { TagAssignmentPicker } from "@/components/tags/TagAssignmentPicker";
 
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
@@ -115,6 +116,7 @@ export function ContactDetailClient({ contactId }: Props) {
         )}
       </header>
 
+      <CompanyContactContext contactId={contactId} editable={!contact.is_anonymized} />
       <TagAssignmentPicker kind="contact" entityId={contactId} disabled={contact.is_anonymized} />
       <ConversaNoDossie conversa={contact.conversa} />
       <CommercialContextPanel contactId={contactId} allowActions={!contact.is_anonymized} />

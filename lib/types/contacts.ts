@@ -5,6 +5,7 @@
 export interface Contact {
   id: string;
   organization_id: string;
+  company_id?: string | null;
   name: string | null;
   display_name: string | null;
   email: string | null;
@@ -50,7 +51,7 @@ export interface TimelineItem {
    * e vira campo que ninguém sabe que existe.
    */
   organization_id: string;
-  lead_id: string;
+  lead_id: string | null;
   contact_id: string | null;
   source_module: string;
   source_id: string | null;

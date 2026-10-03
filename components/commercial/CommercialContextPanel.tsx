@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyContactContext } from "@/components/companies/CompanyContactContext";
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -97,6 +98,7 @@ export function CommercialContextPanel({
         )}
       </div>
       {canWrite && pipeline.isError && <p role="alert">{t("Não foi possível carregar o funil padrão.")}</p>}
+      {leadId && <CompanyContactContext contactId={contactId} />}
       <h3 className="text-sm font-medium">{t("Oportunidades")}</h3>
       {!visibleLeads.length && (
         <p className="text-sm text-text-muted">

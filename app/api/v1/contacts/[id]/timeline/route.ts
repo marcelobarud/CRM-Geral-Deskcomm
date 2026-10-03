@@ -70,7 +70,7 @@ export async function GET(
   // Verify contact accessible (RLS will filter); 404 if not.
   const { data: contactRow, error: cErr } = await supabase
     .from("contacts")
-    .select("id")
+    .select("id,organization_id")
     .eq("id", contactId)
     .maybeSingle();
   if (cErr) return fail("internal_error", cErr.message, 500, { requestId });
@@ -80,6 +80,7 @@ export async function GET(
   const { data: leadRows, error: lErr } = await supabase
     .from("crm_leads")
     .select("id")
+    .eq("organization_id", contactRow.organization_id)
     .eq("contact_id", contactId);
   if (lErr) return fail("internal_error", lErr.message, 500, { requestId });
 
@@ -93,6 +94,7 @@ export async function GET(
     let q = supabase
       .from("crm_lead_activities")
       .select(TIMELINE_COLS)
+      .eq("organization_id", contactRow.organization_id)
       .order("performed_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(FETCH);
@@ -109,7 +111,9 @@ export async function GET(
 
   const directQ = buildQuery("contact_id", contactId);
   const leadQ =
-    leadIds.length > 0 ? buildQuery("lead_id", leadIds) : Promise.resolve({ data: [], error: null });
+    leadIds.length > 0
+      ? buildQuery("lead_id", leadIds)
+      : Promise.resolve({ data: [], error: null });
 
   const [directRes, leadRes] = await Promise.all([directQ, leadQ]);
 
@@ -127,6 +131,45 @@ export async function GET(
   // real (campo do tipo fora do SELECT compilava verde) e ganha-se o portão de
   // exaustividade acima, que protege.
   const merged = new Map<string, TimelineItem>();
+  if (!types.length || types.includes("note")) {
+    const history = await supabase.rpc("fn_crm_company_contact_history", {
+      p_org: contactRow.organization_id,
+      p_contact: contactId,
+      p_limit: FETCH,
+      ...(cursor ? { p_before: cursor.performed_at, p_before_id: cursor.id } : {}),
+    });
+    if (history.error)
+      return fail("internal_error", t("Não foi possível carregar o histórico empresarial."), 500, {
+        requestId,
+      });
+    const rows = (history.data ?? []) as unknown as {
+      id: string;
+      organization_id: string;
+      actor_user_id: string | null;
+      created_at: string;
+      metadata: Record<string, unknown>;
+    }[];
+    for (const h of rows)
+      merged.set(h.id, {
+        id: h.id,
+        organization_id: h.organization_id,
+        lead_id: null,
+        contact_id: contactId,
+        source_module: "crm",
+        source_id: contactId,
+        type: "note",
+        payload: h.metadata,
+        metadata: {},
+        performed_at: h.created_at,
+        performed_by_user_id: h.actor_user_id,
+        actor_kind: h.actor_user_id ? "user" : "system",
+        reason: h.metadata.company_id
+          ? h.metadata.previous_company_id
+            ? "Empresa vinculada ao contato alterada."
+            : "Empresa vinculada ao contato."
+          : "Vínculo com empresa removido.",
+      });
+  }
   for (const row of (directRes.data ?? []) as unknown as TimelineItem[]) merged.set(row.id, row);
   for (const row of (leadRes.data ?? []) as unknown as TimelineItem[]) merged.set(row.id, row);
 
@@ -148,9 +191,7 @@ export async function GET(
   const page = await comNomeDoAtor(supabase, pageRows);
   const last = page[page.length - 1];
   const nextCursor =
-    hasMore && last
-      ? encodeCursor({ performed_at: last.performed_at, id: last.id })
-      : null;
+    hasMore && last ? encodeCursor({ performed_at: last.performed_at, id: last.id }) : null;
 
   return ok(page, {
     requestId,
