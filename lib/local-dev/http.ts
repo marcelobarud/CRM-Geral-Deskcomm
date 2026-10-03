@@ -27,6 +27,7 @@ export async function requestAuth(request: Request): Promise<LocalRequestAuth | 
 }
 
 export function authConfigOrResponse(): { email: string; password: string } | NextResponse {
+  if (!env.LOCAL_DEV_AUTH || env.NODE_ENV === "production") return localDisabled();
   try {
     const config = localAuthConfig();
     if (!config.password) {
