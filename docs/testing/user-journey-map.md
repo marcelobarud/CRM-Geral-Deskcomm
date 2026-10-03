@@ -1985,3 +1985,21 @@ Produto `7f1d0f3e`, integrado à main `ca895850`: as dez specs de organizações
 Evidência local preservada em `.superpowers/evidence/comunidade-360/final-qa-targeted-r4/` e log `.superpowers/sdd/comunidade-360/final-qa-targeted-r4.log`. A rodada inclui atualização concorrente da interface sem perder formulário, sugestão obsoleta sem confirmação antiga de sucesso e encerramento de suporte com retorno ao contexto original.
 
 Validação integral do mesmo produto: 733 arquivos unitários / 7.911 casos aprovados + 1 falha esperada; 184 arquivos de banco / 1.466 casos aprovados + 1 falha esperada e 1 ignorado, com INSTALL e UPDATE; tipos, lint (0 erros, 344 avisos) e build aprovados. `lint:channels`, validadores shell e conferência de release também passaram. Os checks remotos continuam sendo condição do merge pelo revisor da PR #613.
+
+## CRM Geral — Tags estruturais / Bloco C
+
+Fonte executável: `scripts/supabase/verify-tags-foundation.mjs`, iniciador
+`start-geral-1.ps1 -Prompt -Suite Tags`; Geral 1, usuários reais A/B descartáveis.
+
+| Caso | Expectativa |
+|---|---|
+| Admin cria tag em Configurações | ID por organização; variante trivial conflita; cor opcional |
+| Contato, oportunidade e conversa recebem tag | Mesmo seletor; vínculo por UUID e catálogo preservado ao remover |
+| Filtros nas três telas | Registros marcados aparecem no recorte existente |
+| Rename/merge | ID do rename mantido; destino único no merge, três escopos sem duplicação |
+| Exclusão global | Impacto mostrado; vínculo/configuração em uso bloqueia; confirmação explícita |
+| Viewer/agent/admin A/B | Viewer lê; agent usa; admin gerencia; outro tenant/anon não acessa |
+| 1440×900 e 390×844 | Chips/nome longo/ficha mobile/diálogo sem overflow; teclado/foco/labels |
+| Finalização | `fixtures_cleaned=true` somente após remoção de orgs, usuários e sessões próprios |
+
+Status da execução real e evidências ficam em `docs/TAGS_FOUNDATION_IMPLEMENTATION.md`.

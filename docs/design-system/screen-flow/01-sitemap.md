@@ -225,3 +225,14 @@ Listadas pra completude do roteamento, mas sem UI associada.
 - **Rotas públicas + onboarding**: ~12
 - **Rotas de erro globais**: 5
 - **Total estimado de telas únicas**: ~70 (vide `03-screen-inventory.md`)
+
+## CRM Geral — Bloco C (2026-10-03)
+
+`/app/settings/tenant/tags`: administrador da organização; catálogo, nome/cor,
+rename, merge com destino/impacto explícitos e exclusão apenas sem uso. Registro
+canônico em `lib/navigation/catalogo.ts`, grupo Organização/Sua empresa.
+
+Contato (`/app/contacts/[id]`), dossiê da oportunidade e ficha da conversa usam
+`TagAssignmentPicker`: catálogo → vínculo contextual por UUID → chips/remoção.
+Filtros existentes de contatos, oportunidades e Inbox usam nomes atuais do mesmo
+catálogo; projeções textuais são compatibilidade derivada, não catálogo paralelo.
