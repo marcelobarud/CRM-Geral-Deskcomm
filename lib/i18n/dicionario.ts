@@ -37,6 +37,10 @@ import type { Idioma } from "./idiomas";
 type Traducoes = Record<string, Partial<Record<Exclude<Idioma, "pt-BR">, string>>>;
 
 export const DICIONARIO: Traducoes = {
+  "Todos os funis": { es: "Todos los embudos" },
+  "Aplicar filtros": { es: "Aplicar filtros" },
+  "Abertas": { es: "Abiertas" },
+  "Configurar probabilidades": { es: "Configurar probabilidades" },
   "Probabilidade (%)": { es: "Probabilidad (%)" },
   "Estimativa comercial. Vazio = não configurada.": { es: "Estimación comercial. Vacío = sin configurar." },
   "Salvar probabilidade": { es: "Guardar probabilidad" },

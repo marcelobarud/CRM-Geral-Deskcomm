@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/auth/AuthProvider";
@@ -66,6 +67,7 @@ export function CommercialReportPanel({
       className="min-w-0 space-y-4 rounded-md border p-4"
     >
       <h2 className="text-xl font-semibold">{t("Relatório comercial")}</h2>
+      {compare && <Link className="inline-block underline" href="/app/settings/tenant/pipelines">{t("Configurar probabilidades")}</Link>}
       <p className="text-sm text-text-muted">
         {t(
           "Forecast ponderado usa o valor das oportunidades abertas multiplicado pela probabilidade da etapa.",
