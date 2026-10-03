@@ -15,6 +15,13 @@ export async function verifyReportingForecast({admin,a,b,viewer,agent,anon,orgA,
   ].map(s=>({is_won:false,is_lost:false,probability_percent:null,...s,organization_id:orgA,pipeline_id:pipe}))).select("id,name,probability_percent"),"E etapas");
   const sid=(name)=>stages.find(s=>s.name===name).id;
   insist(stages.filter(s=>["Etapa E A","Etapa E B","Etapa E C","Sem configuração E"].includes(s.name)).every(s=>s.probability_percent===null),"E etapas nascem sem probabilidade");
+  // O servidor dev compila a rota no primeiro acesso; o client da UI limita a leitura a 10s.
+  // Valida a API real antes da tela, sem registrar corpos, headers ou credenciais.
+  insist(true,"E leitura de etapas pela API do app");
+  const stageResponse=await context.request.get(app+"/api/v1/pipelines/"+pipe+"/agent-mapping",{timeout:120000});
+  insist(stageResponse.ok(),"E API etapas HTTP "+stageResponse.status());
+  const stagePayload=await stageResponse.json();
+  insist(stagePayload.data?.etapas?.length===stages.length,"E API retorna todas as etapas fictícias");
   await page.setViewportSize({width:1440,height:900});
   await page.goto(app+"/app/settings/tenant/pipelines",{timeout:120000});
   for(const [name,percent] of [["Etapa E A",20],["Etapa E B",50],["Etapa E C",80]]) {

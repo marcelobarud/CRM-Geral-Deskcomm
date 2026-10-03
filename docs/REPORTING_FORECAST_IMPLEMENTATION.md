@@ -154,6 +154,15 @@ NOT NULL. Corrigido somente o harness com is_won/is_lost=false e probabilidade
 null explícitos antes dos overrides. O relatório confirmou fixtures_cleaned=true.
 Jornada Forecast e conferência independente continuam pendentes de nova execução.
 
+Segunda execução real (2026-10-03): etapas criadas; timeout na primeira edição
+pela UI. A captura mostra erro de carregamento de etapas. Colunas necessárias e
+SELECT da probabilidade confirmados no Geral 1. Primeira compilação da rota dev
+acima do timeout de 10s do client é hipótese, ainda não comprovada. O harness
+agora verifica GET autenticado de agent-mapping e quantidade de etapas antes da
+navegação, com prazo de compilação de 120s e status HTTP no checkpoint, sem
+persistir resposta bruta. UI e persistência por PATCH continuam obrigatórias.
+Limpeza independente confirmou zero organizações e usuários dos IDs do journal.
+
 ## Gaps e Git
 
 P0: nenhum identificado nas provas concluídas; aceite completo ainda pendente.
