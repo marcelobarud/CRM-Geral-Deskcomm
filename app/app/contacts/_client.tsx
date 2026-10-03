@@ -1,4 +1,5 @@
 "use client";
+import { useTags } from "@/hooks/tags/useTags";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useT } from "@/hooks/i18n/useT";
 import { Plus, MagnifyingGlass, UploadSimple, UsersThree } from "@/lib/ui/icons";
@@ -61,11 +62,8 @@ export function ContactsListClient() {
     [q.data],
   );
 
-  const tagOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const c of allContacts) for (const tag of c.tags) set.add(tag);
-    return Array.from(set).sort();
-  }, [allContacts]);
+  const tagCatalog = useTags();
+  const tagOptions = (tagCatalog.data?.tags ?? []).map(tag => tag.name);
 
   const handleSort = useCallback(
     (column: ContactOrderBy) => {

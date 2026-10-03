@@ -1,10 +1,11 @@
 "use client";
+import { TagSelectionField } from "@/components/tags/TagSelectionField";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { MOEDAS_SERVIDAS } from "@/lib/money";
 
 import { useT } from "@/hooks/i18n/useT";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -39,7 +40,7 @@ interface FormShape {
   description: string;
   stage_id: string;
   valueReais: string;
-  tagsRaw: string;
+  tags: string[];
   expected_close_date: string;
   contact_id: string;
   owner_user_id: string;
@@ -85,7 +86,7 @@ export function NewLeadDialog({
       description: "",
       stage_id: initialStage,
       valueReais: "",
-      tagsRaw: "",
+      tags: [],
       expected_close_date: "",
       contact_id: contactId ?? "",
       owner_user_id: user.id,
@@ -101,11 +102,10 @@ export function NewLeadDialog({
     }
   }, [initialStage, form]);
 
+  const selectedTags = useWatch({ control: form.control, name: "tags" });
+
   async function onSubmit(values: FormShape) {
-    const tags = values.tagsRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const tags = values.tags;
 
     const reais = values.valueReais.trim();
     let valueCents: number | null = null;
@@ -147,7 +147,7 @@ export function NewLeadDialog({
         description: "",
         stage_id: initialStage,
         valueReais: "",
-        tagsRaw: "",
+        tags: [],
         expected_close_date: "",
         contact_id: contactId ?? "",
         owner_user_id: user.id,
@@ -300,10 +300,7 @@ export function NewLeadDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
-            <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
-          </div>
+          <TagSelectionField value={selectedTags} onChange={tags => form.setValue("tags", tags)} />
 
           <DialogFooter>
             <Button

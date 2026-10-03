@@ -13,7 +13,8 @@
 import { z } from "zod";
 
 import { audit } from "@/lib/audit";
-import { conversationTagSchema, conversationTagsSchema } from "@/lib/schemas/messaging";
+import { loadTagCompatibility } from "@/lib/tags/compatibility";
+import { conversationTagSchema } from "@/lib/schemas/messaging";
 import { getQueueStatus } from "@/lib/routing/queue";
 import type { McpContext } from "../types";
 import type { McpToolDefinition } from "../types";
@@ -176,7 +177,7 @@ export const crmManageTags: McpToolDefinition<typeof tagsInputShape> = {
   description:
     "Adiciona/remove tags em uma conversation, contact ou lead. Tags são normalizadas " +
     "(lowercase, trim, ≤40 chars cada, ≤20 no total). Informe ao menos um de add/remove. " +
-    "Recusa alvo de outra org.",
+    "Recusa alvo de outra org e nomes fora do catálogo. Nomes antigos resolvem a identidade atual.",
   inputSchema: tagsInputShape,
   category: "write",
   requiresRole: "agent",
@@ -199,10 +200,14 @@ export const crmManageTags: McpToolDefinition<typeof tagsInputShape> = {
     if (fetchErr) throw new Error(fetchErr.message);
     if (!row) throw new Error("target_not_found");
 
-    const current = ((row as { tags: string[] | null }).tags ?? []).map((t) => t);
-    const merged = [...current, ...addTags].filter((t) => !removeTags.has(t));
-    // Dedup + teto de 20 (rejeita se estourar) — mesma validação da G3-05.
-    const nextTags = conversationTagsSchema.parse(merged);
+    const catalog = await loadTagCompatibility(ctx.supabase, ctx.organizationId);
+    const current = catalog.resolve((row as { tags: string[] | null }).tags ?? []);
+    const removeIds = new Set(catalog.resolve([...removeTags]).map(tag => tag.id));
+    const added = catalog.resolve(addTags);
+    const next = new Map(current.filter(tag => !removeIds.has(tag.id)).map(tag => [tag.id, tag.name]));
+    for (const tag of added) if (!removeIds.has(tag.id)) next.set(tag.id, tag.name);
+    if (next.size > 20) throw new Error("tag_limit_exceeded");
+    const nextTags = [...next.values()];
 
     const { error: updateErr } = await ctx.supabase
       .from(table)

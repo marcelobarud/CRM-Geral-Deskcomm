@@ -405,22 +405,26 @@ describe("preencher resposta pronta", () => {
 // ---------------------------------------------------------------------------
 
 describe("listar marcadores", () => {
-  it("junta o vocabulário oficial com o que está em uso, os mais usados primeiro", async () => {
+  it("lista o catálogo por identidade com contagem de vínculos, sem aliases duplicados", async () => {
     const db = makeDb();
-    (db.tabelas as unknown as Record<string, unknown[]>).organizations = [
-      { id: ORG_ID, settings: { canonical_conversation_tags: ["urgente", "nunca-usado"] } },
+    (db.tabelas as unknown as Record<string, unknown[]>).crm_tags = [
+      { id: "tag-1", organization_id: ORG_ID, name: "urgente", is_archived: false, merged_into: null },
+      { id: "tag-2", organization_id: ORG_ID, name: "vip", is_archived: false, merged_into: null },
+      { id: "tag-3", organization_id: ORG_ID, name: "nunca-usado", is_archived: false, merged_into: null },
+      { id: "tag-4", organization_id: OUTRA_ORG, name: "de-outra-empresa", is_archived: false, merged_into: null },
     ];
-    (db.tabelas as unknown as Record<string, unknown[]>).conversations = [
-      { id: "c1", organization_id: ORG_ID, tags: ["urgente", "vip"] },
-      { id: "c2", organization_id: ORG_ID, tags: ["urgente"] },
-      { id: "c3", organization_id: OUTRA_ORG, tags: ["de-outra-empresa"] },
+    (db.tabelas as unknown as Record<string, unknown[]>).crm_tag_assignments = [
+      { organization_id: ORG_ID, entity_kind: "conversation", tag_id: "tag-1" },
+      { organization_id: ORG_ID, entity_kind: "conversation", tag_id: "tag-1" },
+      { organization_id: ORG_ID, entity_kind: "conversation", tag_id: "tag-2" },
+      { organization_id: OUTRA_ORG, entity_kind: "conversation", tag_id: "tag-4" },
     ];
 
     const lista = await listarMarcadores(deps(db));
 
     expect(lista).toEqual([
       { marcador: "urgente", conversas: 2, oficial: true },
-      { marcador: "vip", conversas: 1, oficial: false },
+      { marcador: "vip", conversas: 1, oficial: true },
       { marcador: "nunca-usado", conversas: 0, oficial: true },
     ]);
     // Marcador de outro tenant não entra — o filtro de organização é o que separa.

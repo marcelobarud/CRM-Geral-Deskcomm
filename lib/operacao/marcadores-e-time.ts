@@ -1,24 +1,6 @@
-/**
- * Os MARCADORES em uso e QUEM TRABALHA na empresa — as duas leituras que fazem
- * o agente organizar a operação sem inventar vocabulário nem pessoa.
- *
- * ⚠️ POR QUE LISTAR MARCADOR RESOLVE MAIS DO QUE CRIAR. `crm_manage_tags` já
- * aplica marcador livre — o agente sempre pôde "criar" um digitando um nome
- * novo. O defeito real é o oposto: sem enxergar o que já existe, ele escreve
- * `cliente-vip` numa conversa e `vip` na seguinte, e o filtro do dono da loja
- * passa a mentir sobre quantos clientes VIP ele tem. A cura é a LISTA, não um
- * segundo escritor.
- *
- * ⚠️ NÃO HÁ ESCRITA NO VOCABULÁRIO CANÔNICO, E É DECISÃO. Os marcadores
- * "oficiais" moram em `organizations.settings.canonical_conversation_tags`, que
- * hoje tem rota de LEITURA (`/api/v1/conversation-tags`) e **nenhuma tela para
- * ver ou mudar**. Deixar o agente escrever ali criaria configuração alterável só
- * por quem lê o banco — exatamente o invariante 6 da doutrina do sistema vivo
- * ("toda configuração tem superfície"). Registrado no HANDOFF: a superfície vem
- * antes do escritor.
- */
+/** Catálogo estrutural por organização; contratos textuais existentes conservados. */
 import { ApiError } from "@/lib/api/types";
-import { canonicalConversationTagsSchema } from "@/lib/schemas/settings";
+
 import type { DepsDaOperacao } from "@/lib/operacao/entradas-automaticas";
 
 export interface MarcadorEmUso {
@@ -47,50 +29,15 @@ export async function listarMarcadores(
 ): Promise<MarcadorEmUso[]> {
   const limite = opts.limite ?? 60;
 
-  const { data: org, error: orgErr } = await deps.supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", deps.organizationId)
-    .maybeSingle();
-  if (orgErr) throw new ApiError(500, "internal_error", undefined, deps.requestId, orgErr.message);
-
-  const oficiais = new Set<string>(
-    canonicalConversationTagsSchema.parse(
-      (org?.settings as Record<string, unknown> | null)?.["canonical_conversation_tags"] ?? [],
-    ),
-  );
-
-  // ⚠️ CONTAGEM EM JS, e não com um `unnest` no banco: `tags` é `text[]` e o
-  // PostgREST não agrega. Uma RPC nova só para isto seria mais schema para o
-  // clone atualizar; a leitura é limitada e a org tem conversas na casa dos
-  // milhares, não dos milhões. Se um dia doer, vira índice GIN + RPC — e o
-  // contrato desta função não muda.
-  const { data: conversas, error: convErr } = await deps.supabase
-    .from("conversations")
-    .select("tags")
-    .eq("organization_id", deps.organizationId)
-    .limit(2000);
-  if (convErr) {
-    throw new ApiError(500, "internal_error", undefined, deps.requestId, convErr.message);
-  }
-
-  const contagem = new Map<string, number>();
-  for (const c of (conversas ?? []) as unknown as Array<{ tags: string[] | null }>) {
-    for (const t of c.tags ?? []) contagem.set(t, (contagem.get(t) ?? 0) + 1);
-  }
-  for (const oficial of oficiais) {
-    if (!contagem.has(oficial)) contagem.set(oficial, 0);
-  }
-
-  return [...contagem.entries()]
-    .map(([marcador, conversas_]) => ({
-      marcador,
-      conversas: conversas_,
-      oficial: oficiais.has(marcador),
-    }))
-    // Os mais usados primeiro: é a ordem em que alguém decidiria reaproveitar.
-    .sort((a, b) => b.conversas - a.conversas || a.marcador.localeCompare(b.marcador))
-    .slice(0, limite);
+  const [catalog, assignments] = await Promise.all([
+    deps.supabase.from("crm_tags").select("id,name").eq("organization_id", deps.organizationId).eq("is_archived", false).is("merged_into", null),
+    deps.supabase.from("crm_tag_assignments").select("tag_id").eq("organization_id", deps.organizationId).eq("entity_kind", "conversation").limit(2000),
+  ]);
+  if (catalog.error || assignments.error) throw new ApiError(500, "internal_error", undefined, deps.requestId, "Catálogo indisponível.");
+  const counts = new Map<string, number>();
+  for (const binding of assignments.data ?? []) counts.set(binding.tag_id, (counts.get(binding.tag_id) ?? 0) + 1);
+  return (catalog.data ?? []).map(tag => ({ marcador: tag.name, conversas: counts.get(tag.id) ?? 0, oficial: true }))
+    .sort((a,b) => b.conversas-a.conversas || a.marcador.localeCompare(b.marcador)).slice(0, limite);
 }
 
 export interface PessoaDoTime {

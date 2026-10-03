@@ -1,4 +1,5 @@
 "use client";
+import { TagBadges } from "@/components/tags/TagBadges";
 
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
@@ -208,9 +209,7 @@ export function ContactsTable({ contacts, orderBy, orderDir, onSort }: Props) {
               <div className="flex flex-wrap gap-1">
                 {c.tags.length === 0
                   ? <span className="text-muted-foreground text-xs">—</span>
-                  : c.tags.map((tag) => (
-                      <Badge key={tag} variant="neutral">{tag}</Badge>
-                    ))}
+                  : <TagBadges tags={c.tags} />}
               </div>
             </TableCell>
             <TableCell className="text-muted-foreground text-sm">

@@ -1,6 +1,7 @@
 "use client";
+import { TagSelectionField } from "@/components/tags/TagSelectionField";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { useT } from "@/hooks/i18n/useT";
 import {
@@ -22,7 +23,7 @@ interface FormShape {
   email?: string;
   phone_number?: string;
   cpf?: string;
-  tagsRaw?: string;
+  tags: string[];
 }
 
 interface Props {
@@ -36,15 +37,14 @@ export function NewContactDialog({ open, onOpenChange }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<FormShape>({
-    defaultValues: { name: "", email: "", phone_number: "", cpf: "", tagsRaw: "" },
+    defaultValues: { name: "", email: "", phone_number: "", cpf: "", tags: [] },
   });
+
+  const selectedTags = useWatch({ control: form.control, name: "tags" });
 
   async function onSubmit(values: FormShape) {
     setServerError(null);
-    const tags = (values.tagsRaw ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const tags = values.tags;
 
     const payload: Record<string, unknown> = { source: "manual" };
     if (values.name?.trim()) payload.name = values.name.trim();
@@ -100,10 +100,7 @@ export function NewContactDialog({ open, onOpenChange }: Props) {
             <Label htmlFor="cpf">{t("CPF (opcional)")}</Label>
             <Input id="cpf" placeholder="00000000000" {...form.register("cpf")} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
-            <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
-          </div>
+          <TagSelectionField value={selectedTags} onChange={tags => form.setValue("tags", tags)} />
           {serverError && (
             <p className="text-sm text-error-fg">{serverError}</p>
           )}

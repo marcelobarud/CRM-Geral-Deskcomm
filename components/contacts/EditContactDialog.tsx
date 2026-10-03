@@ -1,4 +1,5 @@
 "use client";
+import { TagAssignmentPicker } from "@/components/tags/TagAssignmentPicker";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
@@ -24,7 +25,6 @@ interface FormShape {
   name?: string;
   email?: string;
   phone_number?: string;
-  tagsRaw?: string;
   custom_fields?: Record<string, unknown>;
 }
 
@@ -46,7 +46,6 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
       name: contact.name ?? "",
       email: contact.email ?? "",
       phone_number: contact.phone_number ? phoneForDisplay(contact.phone_number) : "",
-      tagsRaw: contact.tags.join(", "),
       custom_fields: contact.custom_fields ?? {},
     },
   });
@@ -59,7 +58,6 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
         name: contact.name ?? "",
         email: contact.email ?? "",
         phone_number: contact.phone_number ? phoneForDisplay(contact.phone_number) : "",
-        tagsRaw: contact.tags.join(", "),
         custom_fields: contact.custom_fields ?? {},
       });
     }
@@ -67,16 +65,11 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
 
   async function onSubmit(values: FormShape) {
     setServerError(null);
-    const tags = (values.tagsRaw ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
 
     const payload: Record<string, unknown> = {};
     if (values.name?.trim()) payload.name = values.name.trim();
     if (values.email?.trim()) payload.email = values.email.trim();
     if (values.phone_number?.trim()) payload.phone_number = values.phone_number.trim();
-    payload.tags = tags;
     // Sempre no payload, mesmo vazio: o PATCH SUBSTITUI, e é assim que apagar um
     // campo pela tela chega ao banco.
     payload.custom_fields = values.custom_fields ?? {};
@@ -115,10 +108,7 @@ export function EditContactDialog({ contact, open, onOpenChange, customFieldDefs
             <Label htmlFor="ec-phone">{t("Telefone (E.164)")}</Label>
             <Input id="ec-phone" {...form.register("phone_number")} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="ec-tags">Tags</Label>
-            <Input id="ec-tags" {...form.register("tagsRaw")} />
-          </div>
+          <TagAssignmentPicker kind="contact" entityId={contact.id} />
           {customFieldDefs.length > 0 && (
             <div className="space-y-3 rounded-md border border-border p-3">
               <div>

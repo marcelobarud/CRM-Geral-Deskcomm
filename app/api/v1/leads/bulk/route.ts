@@ -1,3 +1,4 @@
+import { loadTagCompatibility } from "@/lib/tags/compatibility";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 /**
  * POST /api/v1/leads/bulk
@@ -278,17 +279,32 @@ export async function POST(req: NextRequest): Promise<Response> {
     case "tag": {
       const add = input.params.add ?? [];
       const remove = new Set(input.params.remove ?? []);
+      let catalog: Awaited<ReturnType<typeof loadTagCompatibility>>;
+      try {
+        catalog = await loadTagCompatibility(supabase, organizationId);
+        // Valida o lote inteiro antes de modificar o primeiro registro.
+        catalog.resolve([...add, ...remove, ...visible.flatMap(row => row.tags ?? [])]);
+      } catch (error) {
+        return error instanceof Error && error.message === "tag_catalog_required"
+          ? fail("validation_failed", "Selecione tags existentes no catálogo.", 422, { requestId })
+          : fail("internal_error", "Não foi possível carregar o catálogo de tags.", 500, { requestId });
+      }
+      const removeIds = new Set(catalog.resolve([...remove]).map(tag => tag.id));
+      const addNames = catalog.resolve(add);
       // Compute next tags per row from already-fetched `scoped`.
       for (const row of visible) {
         const current = (row.tags ?? []) as string[];
-        const next = Array.from(new Set([...current.filter((t) => !remove.has(t)), ...add]));
+        const identities = new Map(catalog.resolve(current).filter(tag => !removeIds.has(tag.id)).map(tag => [tag.id, tag.name]));
+        for (const tag of addNames) identities.set(tag.id, tag.name);
+        const next = [...identities.values()];
         const tagServiceOrigin = add.some((tag) => !current.includes(tag))
           ? await observeServiceOrigin(createAdminClient(), organizationId, row.contact_id)
           : null;
         const { error } = await supabase
           .from("crm_leads")
           .update({ tags: next, updated_at: nowIso })
-          .eq("id", row.id);
+          .eq("id", row.id)
+          .eq("organization_id", organizationId);
         if (error) return fail("internal_error", error.message, 500, { requestId });
         updatedCount += 1;
 

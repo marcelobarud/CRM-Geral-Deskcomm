@@ -1,4 +1,5 @@
 "use client";
+import { TagAssignmentPicker } from "@/components/tags/TagAssignmentPicker";
 
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
@@ -99,11 +100,6 @@ export function ContactDetailClient({ contactId }: Props) {
             {contact.phone_number && <span>{phoneForDisplay(contact.phone_number)}</span>}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
-            {contact.tags.map((t) => (
-              <Badge key={t} variant="neutral">
-                {t}
-              </Badge>
-            ))}
             {contact.is_blocked && <Badge variant="warning">{t("Bloqueado")}</Badge>}
             {contact.is_anonymized && <Badge variant="destructive">{t("Anonimizado")}</Badge>}
           </div>
@@ -119,6 +115,7 @@ export function ContactDetailClient({ contactId }: Props) {
         )}
       </header>
 
+      <TagAssignmentPicker kind="contact" entityId={contactId} disabled={contact.is_anonymized} />
       <ConversaNoDossie conversa={contact.conversa} />
       <CommercialContextPanel contactId={contactId} allowActions={!contact.is_anonymized} />
 
@@ -182,18 +179,7 @@ export function ContactDetailClient({ contactId }: Props) {
                   {format(new Date(contact.created_at), "dd/MM/yyyy", { locale: localeDaData })}
                 </dd>
               </div>
-              <div>
-                <dt className="text-xs text-muted-foreground uppercase">Tags</dt>
-                <dd className="mt-1 flex flex-wrap gap-1">
-                  {contact.tags.length === 0
-                    ? "—"
-                    : contact.tags.map((t) => (
-                        <Badge key={t} variant="neutral">
-                          {t}
-                        </Badge>
-                      ))}
-                </dd>
-              </div>
+
             </dl>
           </Card>
         </TabsContent>

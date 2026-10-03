@@ -11,7 +11,7 @@ import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
-import { canonicalConversationTagsSchema } from "@/lib/schemas/settings";
+
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -24,15 +24,14 @@ export async function GET(_req: NextRequest): Promise<Response> {
 
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("organizations")
-    .select("settings")
-    .eq("id", activeOrg.orgId)
-    .maybeSingle();
+    .from("crm_tags")
+    .select("name")
+    .eq("organization_id", activeOrg.orgId)
+    .eq("is_archived", false)
+    .is("merged_into", null)
+    .order("name");
   if (error) return fail("internal_error", error.message, 500, { requestId });
 
-  const raw = (data?.settings as Record<string, unknown> | null)?.[
-    "canonical_conversation_tags"
-  ];
-  const tags = canonicalConversationTagsSchema.parse(raw ?? []);
+  const tags = (data ?? []).map(tag => tag.name);
   return ok(tags, { requestId });
 }

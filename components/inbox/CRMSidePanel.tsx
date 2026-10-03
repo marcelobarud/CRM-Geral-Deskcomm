@@ -1,4 +1,5 @@
 "use client";
+import { TagBadges } from "@/components/tags/TagBadges";
 
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
@@ -558,11 +559,7 @@ export function CRMSidePanel({ conversation }: Props) {
           )}
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {tags.map((t) => (
-                <Badge key={t} variant="secondary" className="h-4 px-1.5 text-[10px]">
-                  {t}
-                </Badge>
-              ))}
+              <TagBadges tags={tags} />
             </div>
           )}
           <div className="flex flex-wrap gap-2 pt-1">
@@ -616,7 +613,7 @@ export function CRMSidePanel({ conversation }: Props) {
 
       <Separator />
 
-      {!readonly && <ConversationTagsEditor
+      {<ConversationTagsEditor
         conversationId={conversation.id}
         orgId={conversation.organization_id}
         tags={conversation.tags ?? []}

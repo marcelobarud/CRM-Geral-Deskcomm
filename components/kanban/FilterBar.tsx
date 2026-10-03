@@ -1,4 +1,5 @@
 "use client";
+import { useTags } from "@/hooks/tags/useTags";
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/hooks/i18n/useT";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ const STATUS_OPTIONS: Array<{ value: NonNullable<LeadFilters["status"]>; label: 
   { value: "lost", label: "Perdidos" },
 ];
 
-export function FilterBar({ filters, onChange, leads }: FilterBarProps) {
+export function FilterBar({ filters, onChange }: FilterBarProps) {
   const t = useT();
   const user = useUser();
   const { data: members } = useAssignableMembers(true);
@@ -54,11 +55,8 @@ export function FilterBar({ filters, onChange, leads }: FilterBarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  const tagOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const l of leads) for (const t of l.tags) set.add(t);
-    return Array.from(set).sort();
-  }, [leads]);
+  const tagCatalog = useTags();
+  const tagOptions = (tagCatalog.data?.tags ?? []).map(tag => tag.name);
 
   const filteredAgentId = parseAgentOwnerFilter(filters.owner);
 

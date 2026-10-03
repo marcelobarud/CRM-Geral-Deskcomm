@@ -1,4 +1,5 @@
 "use client";
+import { TagBadges } from "@/components/tags/TagBadges";
 
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
@@ -126,8 +127,6 @@ export function ConversationListItem({
   const displayName = rotuloDoContato(c, t);
   const phoneFallback = c?.phone_number ? phoneForDisplay(c.phone_number) : "??";
   const tags = c?.tags ?? [];
-  const visibleTags = tags.slice(0, 2);
-  const overflow = tags.length - visibleTags.length;
   const preview = conversation.last_message_preview?.trim() || t("Sem mensagens");
   const truncated = preview.length > 60 ? `${preview.slice(0, 60)}…` : preview;
   const time = relativeTime(conversation.last_message_at, localeDaData);
@@ -162,7 +161,7 @@ export function ConversationListItem({
   const rotuloCanal = canal?.phone_number ?? canal?.display_name ?? null;
 
   const temSelos =
-    visibleTags.length > 0 ||
+    tags.length > 0 ||
     (mostrarAtendente && comando.quem === "humano") ||
     (mostrarCanal && rotuloCanal != null) ||
     Boolean(c?.is_blocked) ||
@@ -257,14 +256,7 @@ export function ConversationListItem({
 
         {temSelos && (
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            {visibleTags.map((t) => (
-              <Badge key={t} variant="secondary" className="h-4 px-1.5 text-[10px]">
-                {t}
-              </Badge>
-            ))}
-            {overflow > 0 && (
-              <span className="text-[10px] text-text-muted">+{overflow}</span>
-            )}
+            {tags.length > 0 && <TagBadges tags={tags} maxVisible={2} />}
             {mostrarAtendente && comando.quem === "humano" && (
               <OwnerBadge ownerKind="user" ownerName={comando.nome ?? t("Atendente")} compacto />
             )}

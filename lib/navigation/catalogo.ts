@@ -541,6 +541,15 @@ export const NAV_CATALOG = [
 
   // ---- Organização — conta, empresa, acesso ----
   {
+    href: "/app/settings/tenant/tags",
+    label: "Tags",
+    description: "Catálogo de tags para contatos, oportunidades e conversas.",
+    icon: "Flag",
+    group: "organizacao",
+    section: "Sua empresa",
+    minRole: "admin",
+  },
+  {
     href: "/app/settings/profile",
     label: "Perfil",
     description: "Seu nome, idioma, fuso horário e avatar.",

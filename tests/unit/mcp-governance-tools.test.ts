@@ -212,10 +212,12 @@ describe("crm_assign_conversation", () => {
 // ---------------------------------------------------------------------------
 
 describe("crm_manage_tags", () => {
-  const withTags = (table: string, tags: string[] | null): Resolver => (q) =>
-    q.terminal === "maybeSingle" && q.table === table
-      ? { data: { id: CONV, tags }, error: null }
-      : { data: null, error: null };
+  const withTags = (table: string, tags: string[] | null): Resolver => (q) => {
+    const names = ["a", "b", "vip", "novo", "extra", ...Array.from({ length: 20 }, (_, i) => "t"+i)];
+    if (q.table === "crm_tags") return { data: names.map(name => ({ id: "tag-"+name, name, normalized_name: name })), error: null };
+    if (q.table === "crm_tag_aliases") return { data: [{ tag_id: "tag-vip", normalized_name: "cliente vip" }], error: null };
+    return q.terminal === "maybeSingle" && q.table === table ? { data: { id: CONV, tags }, error: null } : { data: null, error: null };
+  };
 
   it("add/remove normaliza (lowercase) e persiste; audit action por kind", async () => {
     const cap = makeCap();
@@ -226,6 +228,18 @@ describe("crm_manage_tags", () => {
 
     expect(res.tags.sort()).toEqual(["b", "vip"]);
     expect(cap.updates).toContainEqual({ table: "conversations", values: { tags: ["b", "vip"] } });
+  });
+
+  it("remove a identidade inteira quando aliases de rename/merge coexistem", async () => {
+    const cap = makeCap();
+    const result = await crmManageTags.handler({ target_kind: "contact", target_id: CONV, remove: ["VIP"] }, makeCtx(withTags("contacts", ["VIP", "vip", "Cliente VIP"]), cap)) as { tags: string[] };
+    expect(result.tags).toEqual([]);
+  });
+
+  it("nome desconhecido não permite ao agente criar catálogo", async () => {
+    const cap = makeCap();
+    await expect(crmManageTags.handler({ target_kind: "contact", target_id: CONV, add: ["não catalogado"] }, makeCtx(withTags("contacts", []), cap))).rejects.toThrow("tag_catalog_required");
+    expect(cap.updates).toEqual([]);
   });
 
   it("contact: usa tabela contacts", async () => {

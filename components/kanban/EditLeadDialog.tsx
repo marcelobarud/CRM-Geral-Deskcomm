@@ -1,4 +1,5 @@
 "use client";
+import { TagAssignmentPicker } from "@/components/tags/TagAssignmentPicker";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -25,7 +26,6 @@ interface FormShape {
   title: string;
   description: string;
   valueReais: string;
-  tagsRaw: string;
   expected_close_date: string;
 }
 
@@ -50,7 +50,6 @@ export function EditLeadDialog({ open, onOpenChange, lead, pipelineId }: Props) 
       title: lead.title,
       description: lead.description ?? "",
       valueReais: centsToReais(lead.value_cents),
-      tagsRaw: (lead.tags ?? []).join(", "),
       expected_close_date: lead.expected_close_date ?? "",
     },
   });
@@ -61,7 +60,6 @@ export function EditLeadDialog({ open, onOpenChange, lead, pipelineId }: Props) 
         title: lead.title,
         description: lead.description ?? "",
         valueReais: centsToReais(lead.value_cents),
-        tagsRaw: (lead.tags ?? []).join(", "),
         expected_close_date: lead.expected_close_date ?? "",
       });
     }
@@ -69,10 +67,6 @@ export function EditLeadDialog({ open, onOpenChange, lead, pipelineId }: Props) 
   }, [open, lead.id]);
 
   async function onSubmit(values: FormShape) {
-    const tags = values.tagsRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
 
     const reais = values.valueReais.trim();
     let valueCents: number | null = null;
@@ -88,7 +82,6 @@ export function EditLeadDialog({ open, onOpenChange, lead, pipelineId }: Props) 
       title: values.title.trim(),
       description: values.description.trim() ? values.description.trim() : null,
       value_cents: valueCents,
-      tags,
       expected_close_date: values.expected_close_date || null,
     };
 
@@ -160,10 +153,7 @@ export function EditLeadDialog({ open, onOpenChange, lead, pipelineId }: Props) 
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
-            <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
-          </div>
+          <TagAssignmentPicker kind="lead" entityId={lead.id} />
 
           <DialogFooter>
             <Button
