@@ -1,7 +1,8 @@
 # CRM Geral — Bloco D: B2B simples
 
-Checkpoint de implementação de 2026-10-03. **Homologação Auth/UI/MFA B2B pendente**;
-este relatório não declara o critério de saída concluído.
+Checkpoint de 2026-10-03. **Homologação B2B no Geral 1 concluída** com
+Auth/JWT/UI/MFA reais e limpeza independente confirmada. Os limites da suíte
+global e do harness Docker permanecem descritos abaixo; staging não é produção.
 
 ## Base, auditoria e integração
 
@@ -196,7 +197,7 @@ dois vínculos (desktop/mobile), preservando a interação real e o aceite de UI
 Homologação B2B completa continua pendente.
 
 P0: nenhum identificado nas provas concluídas; não constitui aceite final.
-P1: Auth/JWT/MFA reais, jornada/inspeção 1440×900/390×844 e cleanup B2B pendentes.
+P1: nenhum gap B2B identificado na homologação concluída.
 P2: dívidas preexistentes da suíte global e branding público/funil histórico,
 fora do escopo; nenhum Bloco E, propostas ou financeiro foi iniciado.
 P3: harness Docker/pg15 complementar, observações do Advisor e futura importação
@@ -205,4 +206,21 @@ estruturada/retirada de textos de origem, sem novo requisito de produto.
 D permanece local, sem push/merge/rebase. `docs/DESKCOMM_UPSTREAM_AUDIT.md`
 preservado não rastreado, fora de commits, SHA256
 `1689EF1DBD1FCA2A2B8E3C88522897471BC2CDE7A0ACFB5F6CF9474D2EA9F7D4`.
-Não iniciar Bloco E: prontidão depende de encerrar a homologação B2B.
+Bloco E não iniciado. A homologação B2B foi encerrada; funcionalmente pronto
+para planejar o Bloco E, preservando os limites de regressão global/Docker.
+
+## Homologação final — 2026-10-03
+
+Run `4c73ff15-8298-49dd-ba24-9e46900da9f1`, término UTC
+`2026-10-03T21:44:05.230Z`: passed=true, fixtures_cleaned=true.
+JWT A/B, viewer/agent/admin/anon/service, documento/homônimos e cross-tenant
+passaram. A jornada real empresa → contato → oportunidade/Inbox → edição →
+troca/remoção → histórico → arquivo seguro passou em desktop/mobile e teclado.
+MFA real AAL1 bloqueou catálogo/vínculo e AAL2 permitiu ambos, com logout/login.
+Relatório e evidências fictícias permanecem ignorados em `.local-dev/bloco-d/`;
+`b2b-failure.png` pertence à tentativa anterior e não é evidência desta execução.
+Inspeção visual confirmou vínculo desktop, ficha mobile e histórico de remoção;
+o harness mediu ausência de overflow nas capturas de jornada.
+Consulta independente, limitada aos IDs do journal desta execução, confirmou
+zero organizações, contatos, empresas, usuários Auth e sessões restantes.
+As tentativas descritas acima são histórico de diagnóstico, não pendências atuais.

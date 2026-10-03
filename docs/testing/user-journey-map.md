@@ -2015,4 +2015,4 @@ independente confirmou zero fixtures de organizações/Auth/sessões/catálogo/v
 Suíte `start-geral-1.ps1 -Prompt -Suite B2B`, Geral 1, fixtures Auth A/B.
 Lista/ficha/formulário → contato/vínculo → oportunidade/Inbox → edição → troca/remoção → histórico → arquivamento seguro.
 Prova viewer/agent/admin/anon, FK cross-tenant inclusive service role, documento/tipo e homônimos, MFA AAL1/AAL2 e 1440×900/390×844.
-Estado e limites em `docs/B2B_SIMPLE_IMPLEMENTATION.md`; não declarar aprovado antes do resultado e limpeza reais.
+PASS no Geral 1 em 2026-10-03: run `4c73ff15-8298-49dd-ba24-9e46900da9f1`, JWT/UI/MFA reais, desktop/mobile e teclado. Limpeza independente confirmou zero organizações, contatos, empresas, usuários Auth e sessões das fixtures. Estado e limites em `docs/B2B_SIMPLE_IMPLEMENTATION.md`.
