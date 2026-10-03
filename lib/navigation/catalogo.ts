@@ -103,14 +103,6 @@ export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
  * fechada e por isso não vira `minRole`.
  */
 export const NAV_CATALOG = [
-  {
-    href: "/app/companies",
-    label: "Empresas",
-    description: "Empresas comerciais e seus contatos vinculados.",
-    icon: "Buildings",
-    group: "crm",
-    section: "Relacionamento",
-  },
   // ---- Atendimento — onde o operador passa o dia ----
   {
     href: "/app/inbox",
@@ -188,6 +180,14 @@ export const NAV_CATALOG = [
     group: "crm",
     section: "O dia a dia da venda",
     sidebar: true,
+  },
+  {
+    href: "/app/companies",
+    label: "Empresas",
+    description: "Empresas comerciais e seus contatos vinculados.",
+    icon: "Buildings",
+    group: "crm",
+    section: "O dia a dia da venda",
   },
   {
     // Extraída do PR #418 (@clinicacentrodosorrisosc-code). Fica no CRM e no
