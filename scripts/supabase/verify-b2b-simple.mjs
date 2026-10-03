@@ -68,7 +68,7 @@ export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,con
  const conversation=take(await a.client.from("conversations").insert({organization_id:orgA,contact_id:contact,channel_session_id:channel,status:"open",assigned_to_user_id:a.id}).select("id").single(),"D conversa").id;
  await page.goto(app+"/app/inbox?id="+conversation+"&filter=all",{timeout:120000});
  // A ficha do Inbox já existente é a porta do contexto.
- const ficha=page.getByRole("button",{name:"Ficha",exact:true});if(await ficha.count())await ficha.click();
+ const ficha=page.getByRole("button",{name:"Ficha",exact:true});if(await ficha.isVisible())await ficha.click();
  await page.getByRole("link",{name:"Empresa fictícia B2B A",exact:true}).waitFor();await shot("inbox-1440");
  insist(true,"D UI editar empresa");
  await page.goto(app+"/app/companies/"+one,{timeout:120000});

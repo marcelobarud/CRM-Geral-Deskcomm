@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useCompanies, useCompanyCommand } from "@/hooks/companies/useCompanies";
-import { CompanyForm } from "@/components/companies/CompanyForm";
+import { CompanyForm, COMPANY_FIELDS } from "@/components/companies/CompanyForm";
 import { useT } from "@/hooks/i18n/useT";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,21 +65,7 @@ export function CompanyDetailClient({ id }: { id: string }) {
         />
       ) : (
         <dl className="space-y-2 break-words">
-          {(
-            [
-              ["legal_name", "Razão social"],
-              ["document_type", "Tipo de documento"],
-              ["document", "Documento"],
-              ["email", "Email"],
-              ["phone", "Telefone"],
-              ["website", "Site"],
-              ["address", "Endereço"],
-              ["city", "Cidade"],
-              ["state", "Estado"],
-              ["country", "País"],
-              ["notes", "Observações"],
-            ] as const
-          )
+          {COMPANY_FIELDS.filter(([key]) => key !== "name")
             .filter(([key]) => c[key])
             .map(([key, label]) => (
               <div key={key}>

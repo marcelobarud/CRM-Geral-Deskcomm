@@ -5,7 +5,7 @@ import { useT } from "@/hooks/i18n/useT";
 import type { Company } from "@/lib/companies/types";
 import { companyDataSchema } from "@/lib/companies/schemas";
 import { Button } from "@/components/ui/button";
-const fields = [
+export const COMPANY_FIELDS = [
   ["name", "Nome da empresa"],
   ["legal_name", "Razão social"],
   ["document_type", "Tipo de documento"],
@@ -53,7 +53,7 @@ export function CompanyForm({
         if (result?.data.company_id) onSaved(result.data.company_id);
       }}
     >
-      {fields.map(([key, label]) => (
+      {COMPANY_FIELDS.map(([key, label]) => (
         <label key={key} className="block text-sm">
           {t(label)}
           {key === "notes" ? (

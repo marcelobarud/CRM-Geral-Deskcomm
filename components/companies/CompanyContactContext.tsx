@@ -27,7 +27,7 @@ export function CompanyContactContext({
     !!activeOrg &&
     activeOrg.role !== "viewer" &&
     user.support?.access_mode !== "support_readonly";
-  if (q.isPending) return <p role="status">{t("Carregando empresa…")}</p>;
+  if (q.isPending || (!!currentId && current.isPending)) return <p role="status">{t("Carregando empresa…")}</p>;
   if (q.isError || current.isError)
     return (
       <div role="alert">
