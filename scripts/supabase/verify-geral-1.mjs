@@ -31,6 +31,8 @@ const run = randomUUID(),
 const password = randomBytes(30).toString("base64url");
 let lastCheck = "preflight";
 let failureCode = null;
+let failureReason = null;
+let organizationsCreated = false;
 let phase = "preflight",
   server,
   browser,
@@ -43,6 +45,15 @@ function requireResult(result, label) {
   if (result.error) {
     const code = String(result.error.code ?? result.error.status ?? "unknown");
     failureCode = /^[a-zA-Z0-9_]+$/.test(code) ? code : "unknown";
+    // Apenas categorias conhecidas; nunca persistir mensagem bruta do SDK.
+    const message = String(result.error.message ?? "").toLowerCase();
+    failureReason = message.includes("invalid api key")
+      ? "invalid_api_key"
+      : message.includes("invalid jwt")
+        ? "invalid_jwt"
+        : message.includes("not allowed") || message.includes("not authorized")
+          ? "not_authorized"
+          : "unclassified";
     throw new Error(label);
   }
   return result.data;
@@ -131,6 +142,7 @@ try {
     ]),
     "organizações fictícias",
   );
+  organizationsCreated = true;
   const a = await session("admin", orgA),
     b = await session("admin", orgB),
     viewer = await session("viewer", orgA),
@@ -579,6 +591,7 @@ try {
 } finally {
   const failedCheck = passed ? null : lastCheck;
   const failedCode = failureCode;
+  const failedReason = failureReason;
   await browser?.close();
   if (server)
     await new Promise((r) =>
@@ -598,10 +611,11 @@ try {
       await client.removeAllChannels();
       requireResult(await client.auth.signOut(), "revogar sessões");
     }
-    requireResult(
-      await admin.from("organizations").delete().in("id", [orgA, orgB]),
-      "limpeza organizações próprias",
-    );
+    if (organizationsCreated)
+      requireResult(
+        await admin.from("organizations").delete().in("id", [orgA, orgB]),
+        "limpeza organizações próprias",
+      );
     for (const id of users)
       requireResult(await admin.auth.admin.deleteUser(id), "limpeza Auth próprio");
   } catch {
@@ -619,8 +633,10 @@ try {
         phase,
         last_check: failedCheck ?? lastCheck,
         failure_code: failedCode ?? failureCode,
+        failure_reason: failedReason ?? failureReason,
         checks,
         fixtures_cleaned: cleaned,
+        fixtures_created: organizationsCreated || users.length > 0,
         ...(!cleaned ? { fixture_organizations: [orgA, orgB], fixture_users: users } : {}),
       },
       null,

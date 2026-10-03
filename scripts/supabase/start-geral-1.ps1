@@ -1,5 +1,5 @@
-[CmdletBinding()]
-param([ValidateSet('Verify','Run')][string]$Mode='Verify')
+﻿[CmdletBinding()]
+param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt)
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}
@@ -11,8 +11,8 @@ function Read-HiddenValue([string]$Label){
 }
 Write-Host 'Destino fixo: Supabase Geral 1 (staging). Chaves apenas na memória do processo; nenhum arquivo de segredo será criado.'
 try{
-  if(-not $env:SUPABASE_SERVICE_ROLE_KEY){$env:SUPABASE_SERVICE_ROLE_KEY=Read-HiddenValue 'Chave de servidor do Geral 1 (service_role ou secret key)'}
-  if(-not $env:NEXT_PUBLIC_SUPABASE_ANON_KEY){$env:NEXT_PUBLIC_SUPABASE_ANON_KEY=Read-HiddenValue 'Chave pública do Geral 1 (anon ou publishable key; entrada oculta)'}
+  if($Prompt -or -not $env:SUPABASE_SERVICE_ROLE_KEY){$env:SUPABASE_SERVICE_ROLE_KEY=(Read-HiddenValue 'Chave de servidor do Geral 1 (service_role ou secret key)').Trim()}
+  if($Prompt -or -not $env:NEXT_PUBLIC_SUPABASE_ANON_KEY){$env:NEXT_PUBLIC_SUPABASE_ANON_KEY=(Read-HiddenValue 'Chave pública do Geral 1 (anon ou publishable key; entrada oculta)').Trim()}
   if(-not $env:SUPABASE_SERVICE_ROLE_KEY -or -not $env:NEXT_PUBLIC_SUPABASE_ANON_KEY){throw 'Chaves obrigatórias ausentes.'}
   $env:NEXT_PUBLIC_SUPABASE_URL='https://zwjrhqqwizjpzmeayrju.supabase.co'
   $env:LOCAL_DEV_AUTH='false'
