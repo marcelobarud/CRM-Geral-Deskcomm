@@ -341,7 +341,9 @@ try {
         organization_id: orgA,
         name: "Funil fictício D2",
         slug: `d2-${run}`,
-        is_default: true,
+        // A organização já recebe um funil padrão pelo trigger canônico.
+        // Esta fixture não deve competir com a unicidade desse padrão.
+        is_default: false,
       })
       .select("id")
       .single(),
@@ -380,6 +382,7 @@ try {
   let seenA = 0,
     seenB = 0;
   async function subscribe(client, name, filter, receive) {
+    lastCheck = "subscription Realtime";
     const channel = client
       .channel(name)
       .on(
