@@ -1,6 +1,7 @@
 import {expect} from "@playwright/test";
 export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,contact,desktop,mobile,app,dir,requireResult:take,insist,done}){
  const {page,context}=desktop;
+ try {
  const rpc=async(person,org,action,company=null,data={})=>take(await person.client.rpc("fn_crm_company_manage",{p_org:org,p_action:action,p_company:company,p_data:data}),"D empresa "+action);
  const get=async(path)=>{const r=await context.request.get(app+path);insist(r.ok(),"D leitura "+path.split("?")[0]);return (await r.json()).data;};
  const shot=async(name)=>{insist(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),"D sem overflow "+name);await page.screenshot({path:dir+"/b2b-"+name+".png",fullPage:true});};
@@ -48,9 +49,18 @@ export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,con
  insist(true,"D UI contato e vínculo");
  await page.goto(app+"/app/contacts/"+contact,{timeout:120000});
  const section=page.getByRole("region",{name:"Empresa",exact:true});
+ insist(true,"D UI contato: seletor de empresa disponível");
  await section.getByLabel("Selecionar empresa",{exact:true}).selectOption(one);
- await section.getByRole("button",{name:"Vincular empresa",exact:true}).focus();await page.keyboard.press("Enter");
+ insist(true,"D UI contato: envio do vínculo por teclado");
+ await section.getByRole("button",{name:"Vincular empresa",exact:true}).focus();
+ const [linked]=await Promise.all([
+  page.waitForResponse(r=>r.url().endsWith("/api/v1/companies")&&r.request().method()==="POST"),
+  page.keyboard.press("Enter")
+ ]);
+ insist(linked.ok(),"D UI contato: resposta do vínculo aceita");
+ insist(true,"D UI contato: empresa vinculada aparece na ficha");
  await section.getByRole("link",{name:"Empresa fictícia B2B A",exact:true}).waitFor();await shot("contact-1440");
+ insist(true,"D UI empresa: contato vinculado aparece na ficha");
  await section.getByRole("link",{name:"Empresa fictícia B2B A",exact:true}).click();
  await page.getByRole("link",{name:"Contato fictício D2",exact:true}).waitFor();
  await page.getByRole("button",{name:"Arquivar empresa",exact:true}).click();
@@ -95,5 +105,9 @@ export async function verifyB2BSimple({admin,a,b,viewer,agent,anon,orgA,orgB,con
  await mobile.page.goto(app+"/app/companies/"+two,{timeout:120000});await expect(mobile.page.getByRole("button",{name:"Editar empresa",exact:true})).toHaveCount(0);await mobile.page.screenshot({path:dir+"/b2b-viewer-390.png",fullPage:true});
  done("Bloco D: jornada empresa → contato → oportunidade/Inbox → edição → troca/remoção → histórico → arquivo seguro; desktop/mobile e teclado");
  return {contact_id:contact,company_id:two};
+ } catch(error) {
+  // Somente a tela das fixtures fictícias; nunca persistir headers, cookies ou trace.
+  await page.screenshot({path:dir+"/b2b-failure.png",fullPage:true}).catch(()=>{});
+  throw error;
+ }
 }
-

@@ -30,7 +30,7 @@ try{
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3000'
       & node (Join-Path $repo 'node_modules/next/dist/bin/next') dev -p 3000
     }
-    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2) ou .local-dev/bloco-b/result.json (Commercial) ou .local-dev/bloco-c/result.json (Tags).'}
+    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2), .local-dev/bloco-b/result.json (Commercial), .local-dev/bloco-c/result.json (Tags) ou .local-dev/bloco-d/result.json (B2B).'}
   }finally{Pop-Location}
 }finally{
   foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}

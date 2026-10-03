@@ -180,6 +180,14 @@ Avisos de objetos históricos fora de D permanecem fora do escopo.
 
 ## Gaps e Git
 
+Tentativa real B2B de 2026-10-03: Auth/REST/Storage/Realtime e a bateria JWT
+B2B de isolamento/permissões passaram. A jornada parou por browser_timeout
+no bloco de contato/vínculo, antes de confirmar a tela; fixtures_cleaned=true.
+Não representa homologação completa. O harness agora distingue seletor,
+envio por teclado, resposta HTTP e exibição do vínculo, e captura somente
+a tela fictícia em b2b-failure.png quando houver falha. Nenhuma mudança
+funcional foi feita por hipótese; próxima execução deve localizar a causa.
+
 P0: nenhum identificado nas provas concluídas; não constitui aceite final.
 P1: Auth/JWT/MFA reais, jornada/inspeção 1440×900/390×844 e cleanup B2B pendentes.
 P2: dívidas preexistentes da suíte global e branding público/funil histórico,
@@ -191,4 +199,3 @@ D permanece local, sem push/merge/rebase. `docs/DESKCOMM_UPSTREAM_AUDIT.md`
 preservado não rastreado, fora de commits, SHA256
 `1689EF1DBD1FCA2A2B8E3C88522897471BC2CDE7A0ACFB5F6CF9474D2EA9F7D4`.
 Não iniciar Bloco E: prontidão depende de encerrar a homologação B2B.
-
