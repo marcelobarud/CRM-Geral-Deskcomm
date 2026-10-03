@@ -4332,6 +4332,135 @@ export type Database = {
           },
         ]
       }
+      crm_tag_aliases: {
+        Row: {
+          alias_name: string
+          normalized_name: string | null
+          organization_id: string
+          tag_id: string
+        }
+        Insert: {
+          alias_name: string
+          normalized_name?: string | null
+          organization_id: string
+          tag_id: string
+        }
+        Update: {
+          alias_name?: string
+          normalized_name?: string | null
+          organization_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tag_aliases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tag_aliases_tag_id_organization_id_fkey"
+            columns: ["tag_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tags"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      crm_tag_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          organization_id: string
+          tag_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          organization_id: string
+          tag_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          organization_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tag_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tag_assignments_tag_id_organization_id_fkey"
+            columns: ["tag_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tags"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      crm_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_archived: boolean
+          merged_into: string | null
+          name: string
+          normalized_name: string | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          merged_into?: string | null
+          name: string
+          normalized_name?: string | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          merged_into?: string | null
+          name?: string
+          normalized_name?: string | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tags_merged_into_organization_id_fkey"
+            columns: ["merged_into", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tags"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "crm_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_tasks: {
         Row: {
           assigned_to: string | null
@@ -8709,6 +8838,58 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_crm_tag_assert_target: {
+        Args: { p_kind: string; p_org: string; p_record: string }
+        Returns: undefined
+      }
+      fn_crm_tag_assign: {
+        Args: {
+          p_assign: boolean
+          p_kind: string
+          p_org: string
+          p_record: string
+          p_tag: string
+        }
+        Returns: Json
+      }
+      fn_crm_tag_ensure_legacy: {
+        Args: { p_allow_create: boolean; p_org: string; p_raw: string }
+        Returns: string
+      }
+      fn_crm_tag_impact: {
+        Args: { p_org: string; p_tag: string }
+        Returns: Json
+      }
+      fn_crm_tag_manage: {
+        Args: {
+          p_action: string
+          p_color?: string
+          p_destination?: string
+          p_name?: string
+          p_org: string
+          p_tag?: string
+        }
+        Returns: Json
+      }
+      fn_crm_tag_refresh_record: {
+        Args: { p_kind: string; p_org: string; p_record: string }
+        Returns: undefined
+      }
+      fn_crm_tag_target_visible: {
+        Args: { p_kind: string; p_org: string; p_record: string }
+        Returns: boolean
+      }
+      fn_crm_tags_write_allowed: { Args: { p_org: string }; Returns: boolean }
+      fn_crm_tags_write_legacy: {
+        Args: {
+          p_allow_create: boolean
+          p_kind: string
+          p_org: string
+          p_record: string
+          p_values: string[]
+        }
+        Returns: undefined
+      }
       fn_decrypt_oauth: { Args: { ciphertext: string }; Returns: string }
       fn_definir_logo_da_organizacao: {
         Args: { p_actor: string; p_org: string; p_path: string }
@@ -8985,6 +9166,7 @@ export type Database = {
           pipeline_id: string
         }[]
       }
+      fn_normalize_crm_tag: { Args: { p_name: string }; Returns: string }
       fn_podar_fila_de_jobs: {
         Args: { p_limite?: number; p_retencao_dias?: number }
         Returns: number

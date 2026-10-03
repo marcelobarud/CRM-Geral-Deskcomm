@@ -305,3 +305,10 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261003011000` | `0241_crm_geral_capacidades_grants` | Revoga o grant herdado de default privileges para escrita administrativa por service_role. |
 | `20261003012000` | `0242_crm_geral_capacidades_namespace` | Preserva namespace canônico perante snapshots antigos de outros donos de settings. |
 | `20261003140000` | `0243_crm_geral_relacoes_comerciais` | Valida tenant de contato/funil/etapa/responsável e vínculos de tarefa, sem ampliar RLS ou duplicar entidades. |
+| `20261003170000` | `0244_crm_geral_tags_estruturais` | Catálogo/atribuições por organização, backfill, aliases de compatibilidade, rename/merge e remoção segura com RLS. |
+| `20261003171000` | `0245_crm_geral_tags_guards` | Fecha MFA/suporte nas RPCs e policies de atribuição, preservando os guards também na ponte legada. |
+| `20261003172000` | `0246_crm_geral_tags_removal_guard` | Exige MFA/suporte válido também na remoção da última atribuição via contrato textual legado. |
+| `20261003173000` | `0247_crm_geral_tags_permission_guard` | Usa guard estreito de escrita nas policies/RPC invoker sem conceder EXECUTE nos helpers privados de MFA. |
+| `20261003174000` | `0248_crm_geral_tags_assignment_audit` | Audita vínculos reais e identifica replay idempotente sem repetir eventos. |
+| `20261003175000` | `0249_crm_geral_tags_fk_indexes` | Índices para FKs de tag, ator e origem mesclada introduzidas no Bloco C. |
+| `20261003180000` | `0250_crm_geral_tags_normalized_compatibility` | Preserva grafia normalizada em projeções e bloqueia exclusão de referências JSON nessa grafia. |
