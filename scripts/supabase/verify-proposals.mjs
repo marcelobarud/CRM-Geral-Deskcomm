@@ -1,7 +1,7 @@
 import {expect} from '@playwright/test';
 import {randomUUID,createHash} from 'node:crypto';
 export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult:take,insist,done,getDiagnostic}){
- const {page,context}=desktop;const paths=[];let proposal;
+ let page=desktop.page;const {context}=desktop;const paths=[];let proposal;
  const draft={title:'Proposta fictícia F',currency:'BRL',notes:'Texto fictício original',items:[{description:'Serviço fictício',quantity:'2',unit_price_cents:'10000'}]};
  const shot=async name=>{insist(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'F sem overflow '+name);await page.screenshot({path:dir+'/proposals-'+name+'.png',fullPage:true});};
  const rpc=async(person,org,action,p,data,key=randomUUID())=>person.client.rpc('fn_proposal_command',{p_org:org,p_action:action,p_proposal:p,p_data:data,p_request:key});
@@ -11,7 +11,7 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  insist((await rpc(a,orgA,'create',null,draft)).error?.code==='42501','F criação desligada');
  const foreign=take(await b.client.from('crm_proposal_templates').select('id').eq('organization_id',orgB),'F catálogo B');insist(foreign.length===0,'F B sem catálogo');
  await page.setViewportSize({width:1440,height:900});await page.goto(app+'/app/settings/capabilities',{timeout:120000});
- const toggle=page.getByRole('switch',{name:'Propostas',exact:true});await toggle.focus();await Promise.all([page.waitForResponse(r=>r.url().endsWith('/settings/capabilities')&&r.request().method()==='PATCH',{timeout:120000}),toggle.press('Space')]);
+ let toggle=page.getByRole('switch',{name:'Propostas',exact:true});await toggle.focus();await Promise.all([page.waitForResponse(r=>r.url().endsWith('/settings/capabilities')&&r.request().method()==='PATCH',{timeout:120000}),toggle.press('Space')]);
  await expect(toggle).toBeChecked();
  // Aquece endpoints dev e comprova que o app atende com sessão real antes da tela.
  for(const route of ['/api/v1/proposals','/api/v1/proposal-templates','/api/v1/proposals/options'])insist((await context.request.get(app+route,{timeout:120000})).ok(),'F leitura app '+route);
@@ -63,6 +63,14 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  await Promise.all([page.waitForResponse(r=>r.url().endsWith('/proposals/'+proposal)&&r.request().method()==='PATCH',{timeout:120000}),form.getByRole('button',{name:'Salvar rascunho',exact:true}).click()]);await expect(form).toHaveCount(0);
  const v2=await send();insist(v2.version_number===2&&v2.total_cents===22222,'F versão dois');
  const old=take(await a.client.from('crm_proposal_versions').select('snapshot,pdf_path').eq('organization_id',orgA).eq('id',v1.id).single(),'F v1 preservada');insist(JSON.stringify(old.snapshot)===snapshot,'F snapshot v1 intacto');const oldBytes=take(await a.client.storage.from('proposal-documents').download(v1.pdf_path),'F bytes históricos');insist(createHash('sha256').update(Buffer.from(await oldBytes.arrayBuffer())).digest('hex')===hash1,'F PDF v1 intacto');
+ await page.getByRole('button',{name:'Abrir PDF · v2',exact:true}).waitFor();
+ const [openedPdf]=await Promise.all([page.waitForResponse(r=>r.url().includes('/storage/v1/object/sign/proposal-documents/')&&(r.status()<300||r.status()>=400),{timeout:120000}),page.getByRole('button',{name:'Abrir PDF · v2',exact:true}).click()]);insist(openedPdf.ok(),'F botão PDF documento HTTP '+openedPdf.status());
+ const fetchedPdf=await context.request.get(openedPdf.url());insist(fetchedPdf.ok()&&createHash('sha256').update(await fetchedPdf.body()).digest('hex')===v2.pdf_sha256,'F bytes do PDF aberto correspondem à versão dois');
+ // O visualizador nativo não emite download e pode manter a navegação pendente.
+ // Uma nova página usa a mesma sessão real sem disputar a navegação do PDF.
+ const pdfPage=page;page=await context.newPage();desktop.page=page;await page.setViewportSize({width:390,height:844});toggle=page.getByRole('switch',{name:'Propostas',exact:true});await pdfPage.close();
+ insist(true,'F retorno app após PDF');
+ await page.goto(app+'/app/proposals',{timeout:120000});await page.getByRole('button',{name:'Proposta fictícia F v2',exact:true}).click();await page.getByRole('button',{name:'Abrir PDF · v2',exact:true}).waitFor();
  await shot('history-390');await page.setViewportSize({width:1440,height:900});await shot('history-1440');
  await page.goto(app+'/app/settings/capabilities',{timeout:120000});await toggle.click();await expect(toggle).not.toBeChecked();
  insist((await context.request.post(app+'/api/v1/proposals/'+proposal+'/send',{data:{recipient:'Bloqueado',channel:'other'},headers:{'Idempotency-Key':randomUUID()}})).status()===403,'F geração desligada');
