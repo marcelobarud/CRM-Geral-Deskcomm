@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Campanhas agendadas do CRM Geral",
+    "subtitle": "Snapshot por tag e preparo seguro pela fila existente",
+    "output": "campanhas-agendadas.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    { "id": "pessoa", "label": "Pessoa" },
+    { "id": "app", "label": "Aplicativo" },
+    { "id": "db", "label": "Banco e fila" },
+    { "id": "worker", "label": "Worker existente" }
+  ],
+  "mainPath": ["manager", "campaign", "snapshot", "timer", "queue", "prepare", "recipient"],
+  "nodes": [
+    { "id": "manager", "lane": "pessoa", "label": "Gerente: revisa e confirma o agendamento" },
+    { "id": "capability", "lane": "db", "label": "scheduled_campaigns: default desligado, MFA e role" },
+    { "id": "campaign", "lane": "app", "label": "UI/API: texto, tag, fuso, revisão e cancelamento" },
+    { "id": "snapshot", "lane": "db", "label": "crm_scheduled_campaign_recipients: conjunto congelado por UUID" },
+    { "id": "timer", "lane": "db", "label": "job_queue.run_after: relógio persistente existente" },
+    { "id": "queue", "lane": "db", "label": "job_queue: campaign_prepare, IDs e lote estável" },
+    { "id": "claim", "lane": "worker", "label": "Worker atual: claim existente e lease validado" },
+    { "id": "prepare", "lane": "db", "label": "RPC: capability, tenant, elegibilidade e até 50 linhas" },
+    { "id": "recipient", "lane": "db", "label": "Recipient: ready/skipped/cancelled, nunca sent" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "manager", "to": "campaign", "label": "Ação humana autenticada" },
+    { "id": "e2", "from": "campaign", "to": "capability", "label": "Role, MFA e capability atuais" },
+    { "id": "e3", "from": "campaign", "to": "snapshot", "label": "Transação: resolve tag e congela contatos" },
+    { "id": "e4", "from": "snapshot", "to": "timer", "label": "Agendamento no timezone da organização" },
+    { "id": "e5", "from": "timer", "to": "queue", "label": "run_after atinge o instante UTC" },
+    { "id": "e6", "from": "queue", "to": "claim", "label": "SKIP LOCKED e lease do worker atual" },
+    { "id": "e7", "from": "claim", "to": "prepare", "label": "RPC com organization, campaign, batch e lease" },
+    { "id": "e8", "from": "prepare", "to": "recipient", "label": "Revalida consentimento, bloqueios e E.164" },
+    { "id": "e9", "from": "recipient", "to": "queue", "label": "Lote seguinte idempotente se houver pendentes" },
+    { "id": "e10", "from": "capability", "to": "prepare", "label": "Capability desligada cancela pendentes" }
+  ],
+  "nonConnections": [
+    "Nenhuma aresta até provider nesta release: não existe sandbox homologado e nenhum envio é chamado.",
+    "O motor de automações do Bloco G não inicia campanhas.",
+    "A preparação não usa send_ledger e não marca sent, delivered ou read."
+  ]
+}
