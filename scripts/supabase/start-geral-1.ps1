@@ -1,6 +1,7 @@
 ﻿[CmdletBinding()]
-param([ValidateSet('Verify','Run')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags','B2B','Forecast','Proposals')][string]$Suite='D2')
+param([ValidateSet('Verify','Run','AgentLoop')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags','B2B','Forecast','Proposals')][string]$Suite='D2')
 $ErrorActionPreference='Stop'
+if($Mode -eq 'AgentLoop' -and $Suite -ne 'Proposals'){throw 'A sessão automática aceita somente a suíte Proposals.'}
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}
 $names=@('NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_DB_URL','LOCAL_DEV_AUTH','LOCAL_DEV_AUTH_PASSWORD','LOCAL_DEV_AUTH_SECRET','NEXT_PUBLIC_APP_URL','D2_SUPABASE_STAGING_ACK','CRM_GERAL_VERIFY_SUITE')
@@ -23,14 +24,20 @@ try{
   $env:CRM_GERAL_VERIFY_SUITE=$Suite
   Push-Location -LiteralPath $repo
   try{
-    if($Mode -eq 'Verify'){
+    if($Mode -eq 'AgentLoop'){
+      $env:NEXT_PUBLIC_APP_URL='http://localhost:3002'
+      & (Join-Path $PSScriptRoot 'agent-verification-loop.ps1') -Directory (Join-Path $repo '.local-dev/bloco-f') -RunVerification {
+        & node (Join-Path $PSScriptRoot 'verify-geral-1.mjs') | Out-Host
+        return $LASTEXITCODE
+      }
+    }elseif($Mode -eq 'Verify'){
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3002'
       & node (Join-Path $PSScriptRoot 'verify-geral-1.mjs')
     }else{
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3000'
       & node (Join-Path $repo 'node_modules/next/dist/bin/next') dev -p 3000
     }
-    if($LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2), .local-dev/bloco-b/result.json (Commercial), .local-dev/bloco-c/result.json (Tags) ou .local-dev/bloco-d/result.json (B2B) ou .local-dev/bloco-e/result.json (Forecast) ou .local-dev/bloco-f/result.json (Proposals).'}
+    if($Mode -ne 'AgentLoop' -and $LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2), .local-dev/bloco-b/result.json (Commercial), .local-dev/bloco-c/result.json (Tags) ou .local-dev/bloco-d/result.json (B2B) ou .local-dev/bloco-e/result.json (Forecast) ou .local-dev/bloco-f/result.json (Proposals).'}
   }finally{Pop-Location}
 }finally{
   foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}

@@ -108,3 +108,11 @@ Verificação independente da tentativa: zero organizações das fixtures, zero 
 Execução 6223ce09-6676-4662-89ab-72cd77ced01b: base D2 passou; diagnóstico preservado em F contato, código 23514. A fixture tinha telefone sem o sinal +. A inspeção das constraints revelou também escapes duplicados históricos que rejeitavam e-mail e telefone E.164 válidos. Contagem prévia confirmou zero valores existentes incompatíveis com os padrões corrigidos; nenhum dado foi alterado.
 
 Migration 0267, baseline e MANIFEST corrigem apenas os padrões de contacts_email_format e contacts_phone_e164_format com classes explícitas, sem enfraquecer a validação ou modificar migrations históricas. Fixture usa +5511999990000. Aplicação/reaplicação Geral 1 e probe transacional passaram: criação com e-mail/E.164 válidos, rejeição de e-mail inválido e telefone sem +. Verificação independente da tentativa confirmou zero organizações/usuários/PDFs restantes. Homologação real permanece pendente, sem push/merge e sem início de G.
+
+## Sessão automática com chaves somente em memória
+
+`./scripts/supabase/start-geral-1.ps1 -Prompt -Suite Proposals -Mode AgentLoop` recebe as chaves em campos ocultos uma vez e mantém somente o ambiente do processo/filhos do teste. Codex não lê as chaves: solicita a execução pelo arquivo agent-request.json e lê agent-status.json/result.json, sem credenciais. Diretório de controle ignorado: .local-dev/bloco-f.
+
+Controle fixo: ações run/stop, UUID de sessão e request, deduplicação, sem comando/caminho/endpoint fornecido pelo arquivo. Somente Proposals contra Geral 1; sessão expira após 60 minutos ou encerra por stop/Ctrl+C, restaurando o ambiente anterior. Mantenha o terminal aberto. O processo executa o harness versionado local; não há transmissão da chave para o chat, arquivo .env ou configuração persistente.
+
+Teste sem credenciais reais (test-agent-loop.ps1) passou em três repetições: sessão antiga/ação arbitrária não executam, request repetido não repete teste, valor fictício permanece em memória e não aparece no status, stop encerra. Escrita de status usa arquivo temporário e substituição com retry limitado para disputa breve com leitores no Windows. Nenhum push/merge do Bloco F.
