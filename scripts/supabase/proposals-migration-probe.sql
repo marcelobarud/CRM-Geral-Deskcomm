@@ -19,7 +19,9 @@ do $probe$ declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor u
  r:=public.fn_proposal_command(a,'update',(p->>'id')::uuid,'{"title":"Rascunho novo","currency":"BRL","expected_revision":1,"items":[{"description":"Outro","quantity":"1","unit_price_cents":"99"}]}',gen_random_uuid());
  if (select snapshot->>'title' from public.crm_proposal_versions where id=(v->>'id')::uuid)<>'Proposta fictícia' then raise exception 'historical_mutated'; end if;
  begin perform public.fn_proposal_command(b,'create',null,'{}',gen_random_uuid());raise exception 'cross_tenant_allowed';exception when insufficient_privilege then null;end;
- insert into public.contacts(id,organization_id,name) values(contact,a,'Contato fictício probe');
+ insert into public.contacts(id,organization_id,name,email,phone_number) values(contact,a,'Contato fictício probe','ficticio@example.invalid','+5511999990000');
+ begin update public.contacts set email='email-invalido' where id=contact;raise exception 'invalid_email_allowed';exception when check_violation then null;end;
+ begin update public.contacts set phone_number='5511999990000' where id=contact;raise exception 'invalid_phone_allowed';exception when check_violation then null;end;
  linked:=public.fn_proposal_command(a,'create',null,jsonb_build_object('title','Proposta vinculada','currency','BRL','contact_id',contact,'items',jsonb_build_array(jsonb_build_object('description','Serviço','quantity','1','unit_price_cents','1'))),gen_random_uuid());
  if not exists(select 1 from public.api_audit_log where organization_id=a and resource_id=contact and metadata->>'proposal_id'=linked->>'id' and metadata->>'reason'='Proposta criada') then raise exception 'timeline_missing'; end if;
  perform public.fn_set_capability(a,'proposals',false);

@@ -102,3 +102,9 @@ Execução f78ab7d5-0262-4c13-854e-69acbf32f82b: base D2 passou; Proposals inter
 O relatório havia mostrado a etapa de inventário da limpeza em vez da operação original; o diagnóstico sanitizado agora acompanha o erro até o catch principal, preservado durante cleanup. Teste de regressão passou; seis testes em dois arquivos passaram. Probe transacional Geral 1 confirmou criação/edição da empresa pela RPC e o contrato company_id, além dos checks anteriores de propostas.
 
 Verificação independente da tentativa: zero organizações das fixtures, zero dos quatro usuários e zero objetos proposal-documents nos dois prefixos desta execução. Homologação Proposals continua pendente; executar novamente a mesma suíte. Sem push/merge do Bloco F e sem início de G.
+
+## Segunda tentativa: formato do contato
+
+Execução 6223ce09-6676-4662-89ab-72cd77ced01b: base D2 passou; diagnóstico preservado em F contato, código 23514. A fixture tinha telefone sem o sinal +. A inspeção das constraints revelou também escapes duplicados históricos que rejeitavam e-mail e telefone E.164 válidos. Contagem prévia confirmou zero valores existentes incompatíveis com os padrões corrigidos; nenhum dado foi alterado.
+
+Migration 0267, baseline e MANIFEST corrigem apenas os padrões de contacts_email_format e contacts_phone_e164_format com classes explícitas, sem enfraquecer a validação ou modificar migrations históricas. Fixture usa +5511999990000. Aplicação/reaplicação Geral 1 e probe transacional passaram: criação com e-mail/E.164 válidos, rejeição de e-mail inválido e telefone sem +. Verificação independente da tentativa confirmou zero organizações/usuários/PDFs restantes. Homologação real permanece pendente, sem push/merge e sem início de G.

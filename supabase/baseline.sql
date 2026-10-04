@@ -26368,6 +26368,12 @@ drop trigger if exists proposal_receipt_guard on public.idempotency_keys;
 create trigger proposal_receipt_guard before insert or update or delete on public.idempotency_keys for each row execute function public.fn_proposal_receipt_guard();
 
 
+-- 0267: preserva validação de e-mail/E.164 com padrões sem escape ambíguo.
+alter table public.contacts drop constraint if exists contacts_email_format;
+alter table public.contacts add constraint contacts_email_format check (email is null or email ~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$');
+alter table public.contacts drop constraint if exists contacts_phone_e164_format;
+alter table public.contacts add constraint contacts_phone_e164_format check (phone_number is null or phone_number ~ '^[+][0-9]{8,15}$');
+
 -- cabe varredura — `authenticated` PRECISA de EXECUTE nos helpers de RLS e em
 -- `retrieve_top_k_chunks` (num install fresco ele tem). É julgamento por função,
 -- e o alvo de cada linha é o valor que um install fresco produz, medido.

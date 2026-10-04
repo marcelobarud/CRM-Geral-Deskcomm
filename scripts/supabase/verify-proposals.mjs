@@ -16,7 +16,7 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  // Aquece endpoints dev e comprova que o app atende com sessão real antes da tela.
  for(const route of ['/api/v1/proposals','/api/v1/proposal-templates','/api/v1/proposals/options'])insist((await context.request.get(app+route,{timeout:120000})).ok(),'F leitura app '+route);
  const company=take(await a.client.rpc('fn_crm_company_manage',{p_org:orgA,p_action:'create',p_data:{name:'Empresa fictícia F'}}),'F empresa');
- const contact=take(await a.client.from('contacts').insert({organization_id:orgA,name:'Contato fictício F',email:'ficticio@example.invalid',phone_number:'5511999990000',company_id:company.company_id}).select('id').single(),'F contato');
+ const contact=take(await a.client.from('contacts').insert({organization_id:orgA,name:'Contato fictício F',email:'ficticio@example.invalid',phone_number:'+5511999990000',company_id:company.company_id}).select('id').single(),'F contato');
  const pipe=take(await a.client.from('crm_pipelines').select('id').eq('organization_id',orgA).limit(1).single(),'F contexto funil');
  const stage=take(await a.client.from('crm_stages').select('id').eq('organization_id',orgA).eq('pipeline_id',pipe.id).eq('is_won',false).eq('is_lost',false).limit(1).single(),'F contexto etapa');
  const lead=take(await a.client.from('crm_leads').insert({organization_id:orgA,pipeline_id:pipe.id,stage_id:stage.id,title:'Oportunidade fictícia F',contact_id:contact.id,owner_user_id:a.id}).select('id').single(),'F oportunidade');

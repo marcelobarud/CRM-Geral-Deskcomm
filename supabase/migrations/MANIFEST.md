@@ -328,3 +328,4 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261004008000` | `0264_proposals_contact_projection` | Histórico direto de contato pela projeção de auditoria existente; preserva lead_id obrigatório. |
 | `20261004009000` | `0265_proposals_receipts_guard` | Impede falsificação ou remoção direta de receipts de propostas no ledger compartilhado. |
 | `20261004010000` | `0266_proposals_receipts_syntax` | Corrige expressão LIKE do guard de receipts, confirmada pelo probe transacional. |
+| `20261004011000` | `0267_contact_format_patterns` | Corrige escapes de e-mail e E.164, preservando rejeição de valores inválidos. |
