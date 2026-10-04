@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
-param([ValidateSet('Verify','Run','AgentLoop')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags','B2B','Forecast','Proposals','Automations')][string]$Suite='D2')
+param([ValidateSet('Verify','Run','AgentLoop')][string]$Mode='Verify', [switch]$Prompt, [ValidateSet('D2','Commercial','Tags','B2B','Forecast','Proposals','Automations','Campaigns')][string]$Suite='D2')
 $ErrorActionPreference='Stop'
-if($Mode -eq 'AgentLoop' -and $Suite -notin @('Proposals','Automations')){throw 'A sessão automática aceita somente as suítes Proposals e Automations.'}
+if($Mode -eq 'AgentLoop' -and $Suite -notin @('Proposals','Automations','Campaigns')){throw 'A sessão automática aceita somente as suítes Proposals, Automations e Campaigns.'}
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $previous=@{}
 $names=@('NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_DB_URL','LOCAL_DEV_AUTH','LOCAL_DEV_AUTH_PASSWORD','LOCAL_DEV_AUTH_SECRET','NEXT_PUBLIC_APP_URL','D2_SUPABASE_STAGING_ACK','CRM_GERAL_VERIFY_SUITE')
@@ -26,7 +26,8 @@ try{
   try{
     if($Mode -eq 'AgentLoop'){
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3002'
-      & (Join-Path $PSScriptRoot 'agent-verification-loop.ps1') -Directory (Join-Path $repo $(if($Suite -eq 'Automations'){'.local-dev/bloco-g'}else{'.local-dev/bloco-f'})) -RunVerification {
+      $directory=if($Suite -eq 'Campaigns'){'.local-dev/bloco-h'}elseif($Suite -eq 'Automations'){'.local-dev/bloco-g'}else{'.local-dev/bloco-f'}
+      & (Join-Path $PSScriptRoot 'agent-verification-loop.ps1') -Directory (Join-Path $repo $directory) -RunVerification {
         & node (Join-Path $PSScriptRoot 'verify-geral-1.mjs') | Out-Host
         return $LASTEXITCODE
       }
@@ -37,7 +38,7 @@ try{
       $env:NEXT_PUBLIC_APP_URL='http://localhost:3000'
       & node (Join-Path $repo 'node_modules/next/dist/bin/next') dev -p 3000
     }
-    if($Mode -ne 'AgentLoop' -and $LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2), .local-dev/bloco-b/result.json (Commercial), .local-dev/bloco-c/result.json (Tags) ou .local-dev/bloco-d/result.json (B2B) ou .local-dev/bloco-e/result.json (Forecast) ou .local-dev/bloco-f/result.json (Proposals) ou .local-dev/bloco-g/result.json (Automations).'}
+    if($Mode -ne 'AgentLoop' -and $LASTEXITCODE -ne 0){throw 'Execução não concluída. Consulte o relatório sanitizado em .local-dev/d2/result.json (D2), .local-dev/bloco-b/result.json (Commercial), .local-dev/bloco-c/result.json (Tags) ou .local-dev/bloco-d/result.json (B2B) ou .local-dev/bloco-e/result.json (Forecast) ou .local-dev/bloco-f/result.json (Proposals) ou .local-dev/bloco-g/result.json (Automations) ou .local-dev/bloco-h/result.json (Campaigns).'}
   }finally{Pop-Location}
 }finally{
   foreach($name in $names){[Environment]::SetEnvironmentVariable($name,$previous[$name],'Process')}

@@ -3,6 +3,7 @@ import { verifyProposals } from "./verify-proposals.mjs";
 import { verifyReportingForecast } from "./verify-reporting-forecast.mjs";
 import { verifyB2BSimple } from "./verify-b2b-simple.mjs";
 import { verifyTagsFoundation } from "./verify-tags-foundation.mjs";
+import { verifyScheduledCampaigns } from "./verify-scheduled-campaigns.mjs";
 /** Homologação destrutiva SOMENTE de fixtures desta execução no staging fixo.
  * Não grava senha, token, key, sessão do navegador ou payload de rede. */
 import { verifyCommercialJourney } from "./verify-commercial-journey.mjs";
@@ -51,7 +52,8 @@ const proposalsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Proposals";
 const forecastSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Forecast";
 const b2bSuite = process.env.CRM_GERAL_VERIFY_SUITE === "B2B";
 const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
-const dir = automationsSuite ? ".local-dev/bloco-g" : proposalsSuite ? ".local-dev/bloco-f" : forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const campaignsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Campaigns";
+const dir = campaignsSuite ? ".local-dev/bloco-h" : automationsSuite ? ".local-dev/bloco-g" : proposalsSuite ? ".local-dev/bloco-f" : forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -640,6 +642,9 @@ try {
     }),
     "MFA AAL2",
   );
+  if (campaignsSuite) {
+    requireResult(await a.client.rpc("fn_set_capability", { p_org: orgA, p_capability: "scheduled_campaigns", p_enabled: true }), "H capability AAL2");
+  }
   requireResult(await a.client.auth.signOut(), "logout");
   requireResult(
     await a.client.auth.signInWithPassword({ email: a.email, password }),
@@ -655,6 +660,15 @@ try {
     ).error,
     "MFA não comprovada bloqueada",
   );
+  if (campaignsSuite) {
+    const blockedCampaign = await a.client.rpc("fn_campaign_command", {
+      p_org: orgA,
+      p_action: "create",
+      p_data: { name: "Campanha AAL1 fictícia", tag_id: randomUUID(), content: "Não enviar", channel: "whatsapp" },
+      p_request: randomUUID(),
+    });
+    insist(blockedCampaign.error?.code === "42501", "H MFA AAL1 bloqueia campanha");
+  }
   if (tagsSuite) {
     insist((await a.client.rpc("fn_crm_tag_manage", { p_org: orgA, p_action: "create", p_name: "Sessão AAL1 bloqueada" })).error?.code === "42501", "C MFA AAL1 catálogo bloqueado");
     insist((await a.client.rpc("fn_crm_tag_assign", { p_org: orgA, p_kind: "contact", p_record: tagsProof.contact_id, p_tag: tagsProof.tag_id, p_assign: true })).error?.code === "42501", "C MFA AAL1 vínculo bloqueado");
@@ -706,6 +720,10 @@ try {
     requireResult(await a.client.from('automation_rules').update({name:'Regra fictícia AAL2'}).eq('organization_id',orgA).eq('id',scriptsProof.rule_id).select('id').single(),'G MFA AAL2 regra permitida');
     done('Bloco G: MFA real AAL1 bloqueia roteiro/regra e AAL2 permite ambos');
   }
+  if (campaignsSuite) {
+    phase = "campaigns-journey";
+    await verifyScheduledCampaigns({ admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile, app, dir, run, password, mfaSecret: factor.totp.secret, totp, requireResult, insist, done });
+  }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
 } catch (error) {
@@ -745,8 +763,19 @@ try {
         await admin.from("organizations").delete().in("id", [orgA, orgB]),
         "limpeza organizações próprias",
       );
+    if (organizationsCreated) {
+      const remainingOrganizations = requireResult(
+        await admin.from("organizations").select("id").in("id", [orgA, orgB]),
+        "confirmação independente de organizações",
+      );
+      insist(remainingOrganizations.length === 0, "organizações fictícias ausentes após limpeza");
+    }
     for (const id of users)
       requireResult(await admin.auth.admin.deleteUser(id), "limpeza Auth próprio");
+    if (users.length > 0) {
+      const remainingUsers = requireResult(await admin.auth.admin.listUsers({ page: 1, perPage: 1000 }), "confirmação independente de usuários");
+      insist(!remainingUsers.users.some((user) => users.includes(user.id)), "usuários fictícios ausentes após limpeza");
+    }
   } catch {
     cleaned = false;
     process.exitCode = 1;

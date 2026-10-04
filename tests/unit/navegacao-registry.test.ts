@@ -155,6 +155,7 @@ describe("hubSections", () => {
       "/app/contacts",
       "/app/companies",
       "/app/tasks",
+      "/app/campaigns",
       "/app/products",
       "/app/settings/tenant/pipelines",
     ]);
