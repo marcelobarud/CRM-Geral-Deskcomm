@@ -178,8 +178,8 @@ export async function verifyScheduledCampaigns({
   await page.getByRole("button", { name: "Nova campanha", exact: true }).waitFor();
   await page.screenshot({ path: `${dir}/campaigns-ready-1440.png`, fullPage: true });
 
-  insist((await context.request.get(`${app}/api/v1/campaigns/options`)).ok(), "H API opções");
   const optionsResponse = await context.request.get(`${app}/api/v1/campaigns/options`);
+  insist(optionsResponse.ok(), "H API opções");
   const options = (await optionsResponse.json()).data;
   const { timezone } = options;
 
