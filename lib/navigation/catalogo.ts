@@ -104,6 +104,7 @@ export const GRUPO_NO_RODAPE: NavGroupId = "organizacao";
  */
 export const NAV_CATALOG = [
   {href:"/app/proposals",label:"Propostas",description:"Ofertas comerciais, versões preservadas e PDFs privados.",icon:"FileText",group:"crm",minRole:"agent",section:"O dia a dia da venda"},
+  {href:"/app/scripts",label:"Roteiros curtos",description:"Coleta guiada e contexto para continuar o atendimento.",icon:"ListChecks",group:"crm",minRole:"agent",section:"O dia a dia da venda"},
   // ---- Atendimento — onde o operador passa o dia ----
   {
     href: "/app/inbox",

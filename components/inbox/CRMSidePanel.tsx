@@ -1,5 +1,6 @@
 "use client";
 import { TagBadges } from "@/components/tags/TagBadges";
+import { ScriptSessionPanel } from "@/components/scripts/ScriptSessionPanel";
 
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
@@ -595,6 +596,7 @@ export function CRMSidePanel({ conversation }: Props) {
             )}
           </div>
           {contactId && <CompanyContactContext contactId={contactId} />}
+          {conversation && <ScriptSessionPanel key={conversation.id} conversationId={conversation.id} />}
           {tagEditorOpen && contactId && <ContactTagsEditor contactId={contactId} tags={tags} />}
         </Card>
       </section>
