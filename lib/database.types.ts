@@ -4567,6 +4567,136 @@ export type Database = {
           },
         ]
       }
+      crm_scheduled_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          contact_id: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          reason_code: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          reason_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          contact_id?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          reason_code?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_scheduled_campaign_recipie_organization_id_campaign_id_fkey"
+            columns: ["organization_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_scheduled_campaigns"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "crm_scheduled_campaign_recipients_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_scheduled_campaign_recipients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_scheduled_campaigns: {
+        Row: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          channel: string
+          content: string
+          created_at: string
+          created_by: string | null
+          error_code: string | null
+          id: string
+          name: string
+          organization_id: string
+          preparation_batch: number
+          prepared_at: string | null
+          scheduled_at: string | null
+          status: string
+          tag_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          channel?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          error_code?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          preparation_batch?: number
+          prepared_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tag_id: string
+          timezone: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          channel?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          error_code?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          preparation_batch?: number
+          prepared_at?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tag_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_scheduled_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_scheduled_campaigns_tag_id_organization_id_fkey"
+            columns: ["tag_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "crm_tags"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       crm_script_sessions: {
         Row: {
           answers: Json
@@ -9118,6 +9248,47 @@ export type Database = {
           similarity: number
           source_name: string
         }[]
+      }
+      fn_campaign_command: {
+        Args: {
+          p_action: string
+          p_data: Json
+          p_org: string
+          p_request?: string
+        }
+        Returns: Json
+      }
+      fn_campaign_counts: {
+        Args: { p_campaigns: string[]; p_org: string }
+        Returns: {
+          campaign_id: string
+          cancelled_count: number
+          pending_count: number
+          ready_count: number
+          skipped_count: number
+          total_count: number
+        }[]
+      }
+      fn_campaign_fail_batch: {
+        Args: {
+          p_campaign: string
+          p_claim: string
+          p_job: string
+          p_org: string
+          p_worker: string
+        }
+        Returns: Json
+      }
+      fn_campaign_prepare_batch: {
+        Args: {
+          p_batch: number
+          p_campaign: string
+          p_claim: string
+          p_job: string
+          p_org: string
+          p_worker: string
+        }
+        Returns: Json
       }
       fn_can_view_conversation: {
         Args: { p_assigned_to_user_id: string; p_org: string }

@@ -71,6 +71,7 @@ if (!sentryDsn) {
 import http from "node:http";
 import { hostname } from "node:os";
 import { setTimeout as sleep } from "node:timers/promises";
+import { createClient } from "@supabase/supabase-js";
 
 import type pg from "pg";
 
@@ -81,6 +82,7 @@ import {
 } from "@/lib/agent-engine/agent/followup-turn";
 import { createCaseReplyTurnHandler } from "@/lib/agent-engine/agent/case-reply-turn";
 import { createOperatorTurnHandler } from "@/lib/agent-engine/agent/operator-turn";
+import { createCampaignPreparationHandler } from "@/lib/agent-engine/agent/campaign-preparation";
 import { completeTurnForEnrollment, createPgAdminClient } from "@/lib/followup/turn-bridge";
 import { seedPlatformPlaybook } from "@/lib/agent-engine/agent/playbook-seed";
 import { runCronLoop } from "@/lib/agent-engine/cron/scheduler";
@@ -409,6 +411,15 @@ export async function startWorker(
         await handler(job, pool, { workerId });
         return;
       }
+      // Campaign preparation is manager-initiated and has no service-message
+      // boundary: its dedicated RPC checks the current queue lease, tenant,
+      // capability and contact eligibility, and never performs outbound I/O.
+      if (job.kind === "campaign_prepare") {
+        await handler(job, pool, { workerId });
+        await completeJob(pool, job.id, workerId, undefined, claimOfJob(job)?.acquired_at);
+        log.info("lote de campanha preparado", { job_id: job.id, organization_id: job.organization_id });
+        return;
+      }
       await withServiceJob(pool, job, () => handler(job, pool, { workerId }));
       await completeJob(pool, job.id, workerId, undefined, claimOfJob(job)?.acquired_at);
       log.info("job concluído", { job_id: job.id, kind: job.kind });
@@ -597,6 +608,9 @@ export async function main(): Promise<void> {
   const env = loadEnv();
   const log = createLogger();
   const handlers = new Map<JobKind, JobHandler>();
+  const campaignClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
   const turnDeps: FollowupTurnDeps = {
     crmCfg: crmEdgeConfigFromEnv({
       SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
@@ -634,6 +648,7 @@ export async function main(): Promise<void> {
   // worker que não conhecesse o kind faria os jobs morrerem em 'dead' sem que
   // ninguém entendesse por quê.
   handlers.set("operator_turn", createOperatorTurnHandler(turnDeps));
+  handlers.set("campaign_prepare", createCampaignPreparationHandler(campaignClient));
   await startWorker(env, handlers, log);
 }
 

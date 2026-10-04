@@ -490,6 +490,15 @@ export const AUDIT_ACTIONS = [
   // um bloqueio não há como saber nem uma coisa nem outra.
   "voice.opt_in_changed",
   "voice.session_unpaired",
+
+  // Campanhas comerciais — a trilha acompanha preparação e decisão humana,
+  // sem chamar os eventos de preparação de envio ou entrega.
+  "campaign.created",
+  "campaign.updated",
+  "campaign.scheduled",
+  "campaign.cancelled",
+  "campaign.prepared",
+  "campaign.preparation_failed",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

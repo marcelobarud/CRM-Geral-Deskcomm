@@ -23,6 +23,13 @@ export const CAPABILITIES = {
     min_role: "agent" as Role,
     href: "/app/templates",
   },
+  scheduled_campaigns: {
+    name: "Campanhas agendadas",
+    description: "Preparar e agendar lotes comerciais com revisão e cancelamento.",
+    default_enabled: false,
+    min_role: "manager" as Role,
+    href: "/app/campaigns",
+  },
 } as const;
 export type CapabilityId = keyof typeof CAPABILITIES;
 export type CapabilityState =
