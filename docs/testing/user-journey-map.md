@@ -2027,7 +2027,7 @@ PASS no Geral 1 em 2026-10-03: run `58df9703-b1f2-4494-8501-bc3f0adb5583`, JWT/U
 ## CRM Geral — Propostas / Bloco F
 
 Suíte start-geral-1.ps1 -Prompt -Suite Proposals, Geral 1, JWT A/B.
-Preparada: habilitar → oportunidade/contato/empresa → catálogo/itens/modelo →
+Homologada: habilitar → oportunidade/contato/empresa → catálogo/itens/modelo →
 PDF/v1 → mudança de contexto/modelo/produto → v2 → v1 intacta → desligar →
 histórico; Storage/signed URL A/B, desktop/mobile, teclado e MFA.
-Homologação real pendente; provas SQL/rollback e testes focados concluídos.
+PASS no Geral 1 em 2026-10-03: run ef54dd7d-acf7-4686-917c-370e471aacce, JWT/UI/MFA reais, desktop/mobile, teclado e PDF pelo botão com bytes verificados. Histórico v1/v2 revisado nas duas larguras. Limpeza independente: zero organizações, usuários Auth, sessões e objetos Storage. Limites de distribuição em docs/PROPOSALS_IMPLEMENTATION.md.

@@ -5,7 +5,7 @@
 CONFIRMADO: Bloco E publicado no fork e integrado por fast-forward em main, HEAD d5468f80a940c2c3f7fc3a54157123edf57ae1c5. Branch local de trabalho: bloco-f-propostas. Auditoria documentada e commitada antes do código (0dc21e867). Sem push/merge do Bloco F, sem início de G/H.
 
 CONFIRMADO: implementação, migrations aplicadas ao Geral 1, probe SQL transacional, checks locais e revisão visual de PDF fictício.
-PENDENTE: suíte Proposals com JWTs reais e evidências desktop/mobile/teclado; não declarar homologado ou pronto para G antes dela.
+CONFIRMADO: suíte Proposals com JWTs reais, evidências desktop/mobile/teclado e abertura do PDF pelo botão passou no Geral 1. Limpeza independente confirmou zero organizações, usuários, sessões e objetos restantes. Sessão automática encerrada.
 
 ## Auditoria e escolhas
 
@@ -44,11 +44,11 @@ Snapshot sent não pode mudar ou ser excluído. Desvinculação do ator excluíd
 
 Lista com pesquisa e páginas de 20; estado vazio/erro/retry/carregamento; ficha, rascunho, itens livres/catálogo, modelo criar/editar/aplicar, preparar PDF, registrar envio, versões e arquivo seguro. Contexto acessível pela oportunidade e contato; empresa aparece derivada. Histórico usa timeline comercial existente para oportunidade e a projeção de api_audit_log da timeline do contato para contato direto, sem tabela paralela.
 
-Opções e modelos limitados a 100 registros. Histórico autorizado preservado ao desligar; novas ações desaparecem/bloqueiam na API. UI traduzida para espanhol, labels e controles nativos; evidência real ainda pendente.
+Opções e modelos limitados a 100 registros. Histórico autorizado preservado ao desligar; novas ações desaparecem/bloqueiam na API. UI traduzida para espanhol, labels e controles nativos; evidência real revisada nas duas larguras.
 
 ## Schema e grants
 
-Tripla versionada: 0256–0266, apêndices de baseline.sql e MANIFEST.md. Cada correção já aplicada é preservada e corrigida por migration nova, sem reescrita:
+Tripla versionada: 0256–0267, apêndices de baseline.sql e MANIFEST.md. Cada correção já aplicada é preservada e corrigida por migration nova, sem reescrita:
 - 0256 módulo/capability/RLS/Storage/command;
 - 0257 edição de modelo/autoria/retry sem dependência da marca atual;
 - 0258 PDF preparado sem envio;
@@ -66,7 +66,7 @@ Aplicações no Geral 1 (zwjrhqqwizjpzmeayrju) confirmadas. Reaplicações 0256�
 - typecheck: PASS.
 - lint completo: PASS, zero erros/350 avisos preexistentes.
 - build final: PASS.
-- sete arquivos focados: 46 testes PASS (contratos, guards/API, PDF real, UI, navegação e suporte).
+- oito arquivos focados: 48 testes PASS (contratos, guards/API, PDF real, UI, navegação, suporte e preservação do diagnóstico).
 - i18n: cobertura das novas frases PASS; gate de prosa crua falha em 79 textos históricos do laboratório design-validation, fora do módulo.
 - maps/fluxos: arquitetura JSON, sitemap e mapa de jornada atualizados; gates do mapa previamente passaram.
 - node --check dos dois harnesses e git diff --check: PASS.
@@ -77,7 +77,7 @@ Aplicações no Geral 1 (zwjrhqqwizjpzmeayrju) confirmadas. Reaplicações 0256�
 Advisors finais: sem FK nova sem índice. Dois avisos de SECURITY DEFINER authenticated são intencionais para helper RLS e command guardado; public/anon/service não podem executar command. Índices sem uso são esperados antes de tráfego e foram preservados.
 Referências: [SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable), [índices sem uso](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 
-## Homologação real preparada, ainda pendente
+## Homologação real reproduzível
 
 Executar em terminal local:
 ` .\scripts\supabase\start-geral-1.ps1 -Prompt -Suite Proposals `
@@ -88,12 +88,12 @@ A suíte inclui base D2 real, capability off/on/off, UI empty/criar/modelo/copia
 
 ## Gaps e próximo passo
 
-P0: nenhum confirmado nos checks concluídos; a ausência de homologação não prova ausência de defeitos.
-P1: homologação real Proposals/JWT/MFA/Storage/UX e limpeza independente pendentes; bloqueiam declarar F concluído e iniciar G. Instalação/update limpa via harness de banco também não comprovada.
+P0: nenhum identificado nos checks e na jornada homologada; homologação de staging não equivale a produção homologada.
+P1: instalação/update limpa via harness de banco não comprovada neste ambiente. Proposals/JWT/MFA/Storage/UX e limpeza independente passaram; nenhum gap funcional crítico de Propostas identificado na jornada homologada.
 P2: suíte global/i18n históricos sem verde; não corrigidos fora do escopo.
 P3: busca de contexto/modelos limitada a 100; paginação de propostas usa offset e filtro de contato resolve oportunidades em query auxiliar. Evoluir quando volume exigir; sem infraestrutura antecipada.
 
-Próximo passo imediato é executar e revisar a suíte Proposals. Não iniciar Bloco G nem publicar/mesclar F neste checkpoint.
+Propostas está funcionalmente homologado no Geral 1. A instalação/update limpa permanece pendência de validação de distribuição e impede declarar DoD integral. Bloco G não iniciado; planejamento funcional pode usar esta base, mantendo a pendência explícita. Nenhum push/merge do Bloco F.
 
 ## Primeira tentativa real e correção do harness
 
@@ -116,3 +116,51 @@ Migration 0267, baseline e MANIFEST corrigem apenas os padrões de contacts_emai
 Controle fixo: ações run/stop, UUID de sessão e request, deduplicação, sem comando/caminho/endpoint fornecido pelo arquivo. Somente Proposals contra Geral 1; sessão expira após 60 minutos ou encerra por stop/Ctrl+C, restaurando o ambiente anterior. Mantenha o terminal aberto. O processo executa o harness versionado local; não há transmissão da chave para o chat, arquivo .env ou configuração persistente.
 
 Teste sem credenciais reais (test-agent-loop.ps1) passou em três repetições: sessão antiga/ação arbitrária não executam, request repetido não repete teste, valor fictício permanece em memória e não aparece no status, stop encerra. Escrita de status usa arquivo temporário e substituição com retry limitado para disputa breve com leitores no Windows. Nenhum push/merge do Bloco F.
+
+## Homologação final automática
+
+Execução ef54dd7d-acf7-4686-917c-370e471aacce concluída em 2026-10-04T01:06:34Z (03/10/2026, 22:06 em São Paulo): passed=true, fixtures_cleaned=true. A sessão automática solicitada pelo usuário permitiu testar/corrigir sem ler nem persistir chaves. Controle encerrado com estado stopped; o iniciador restaura o ambiente anterior.
+
+Falha funcional corrigida: GET da lista omitia description dos itens e o cálculo validado derrubava a tela após salvar. A projeção agora inclui description; teste de lista preenchida passou. Nenhuma alteração no cálculo, RBAC ou schema comercial para contornar o problema.
+
+Verificação final incluiu PDF v2 aberto pelo botão (resposta final HTTP 200 e bytes com SHA256 da versão), retorno em página da mesma sessão para evitar disputa com o visualizador PDF nativo, espera explícita pelo botão v2 e capturas de histórico mostrando v1/v2. Falhas intermediárias do teste de navegação/download foram corrigidas no harness, sem relaxar controles de acesso.
+
+Jornada real confirmou modelo/itens, oportunidade/contato/empresa, versões v1/v2, mudanças posteriores de contexto/catálogo/modelo sem mudar v1, retry sem duplicação, capability off/on/off, histórico e PDF após desligamento, JWT A/B/viewer/agent/anon/service, referências cross-tenant, receipt protegido, Storage privado/URL/overwrite negado, MFA AAL1/AAL2 e logout/login. Desktop 1440×900 e mobile 390×844 revisados: lista, rascunho, preparado, envio, histórico e desligado.
+
+Consulta independente por IDs e prefixos da execução: organizations=0, auth.users=0, auth.sessions=0, storage.objects=0. Types gerados do banco não foram editados manualmente. Tipos de rotas do Next foram regenerados pelo comando oficial next typegen após encontrar saída dev inválida; typecheck final passou.
+
+Evidências fictícias e relatórios sanitizados locais ignorados: .local-dev/bloco-f/result.json, fixture-journal.json, proposals-history-1440.png, proposals-history-390.png e demais estados. Revisão pode ser reproduzida pelo harness; imagens não são tratadas como arquivos versionados. Auditoria upstream preexistente permanece não rastreada e inalterada.
+
+## Living System Checklist — Propostas
+
+| Questão | Artefato concreto / decisão |
+|---|---|
+| 1. Quem alimenta? | ProposalsWorkspace, sessão autenticada, crm_leads/contacts/crm_companies, catálogo e modelos do tenant. |
+| 2. Quem recebe? | Ficha/histórico de versões, PDF e timeline comercial existente. |
+| 3. Qual registro? | fn_proposal_command grava crm_lead_activities para oportunidade e api_audit_log/projeção de contato para contato direto. |
+| 4. Onde aparece? | ProposalsWorkspace mostra versões; LeadDossier e CommercialContextPanel oferecem porta contextual; timeline de contato consome a projeção existente. |
+| 5. Qual porta? | Hub CRM, link contextual e /app/proposals; capacidade desativada oculta novos efeitos, preserva histórico autorizado. |
+| 6. Anti-morte? | Versão preparada visível e retry idempotente para falha de PDF; oportunidade mantém seu próximo passo comercial existente. Não há transporte externo ou prazo automático a observar neste bloco. |
+| 7. Configuração? | /app/settings/capabilities; readiness do bucket real e mensagens disabled/not configured/degraded. |
+| 8. Continuidade? | Módulo deliberadamente humano; mantém oportunidade/contato/Inbox e histórico existentes. Não introduz executor IA ou outra passagem de atendimento. |
+| 9. Retorno da falha? | Erro explícito na UI, retry com mesma chave/versão, estado prepared e resultados sanitizados do harness; nenhum sent sem objeto confirmado. |
+| 10. Mapa atualizado? | crm-vivo.architecture.json: capability/UI/version/PDF e suas arestas; sitemap e user-journey-map atualizados. |
+
+## Checkpoint Git e checks de encerramento
+
+Build final e typecheck final: PASS; lint completo zero erros/350 avisos históricos, lint do delta zero erros; oito arquivos focados/48 testes PASS. Global histórico permanece sem verde e test:db/install-update limpa indisponível neste ambiente. Não extrapolar a homologação staging para produção ou para instalação limpa.
+
+main e origin/main preservadas em d5468f80a940c2c3f7fc3a54157123edf57ae1c5. Branch local bloco-f-propostas; nenhum push/merge do Bloco F. Arquivo preexistente docs/DESKCOMM_UPSTREAM_AUDIT.md preservado fora dos commits, SHA256 1689EF1DBD1FCA2A2B8E3C88522897471BC2CDE7A0ACFB5F6CF9474D2EA9F7D4.
+
+Commits locais anteriores ao fechamento deste relatório:
+- fbba00198 test: confirma PDF pelo botão e histórico atualizado de propostas
+- aef2536dc fix: inclui dados dos itens na lista de propostas
+- 4996956a4 test: permite homologação automática com chaves em memória
+- e14455138 fix: corrige validação de contato usada por propostas
+- e4517c67b test: respeita RPC empresarial na homologação de propostas
+- 96efde635 docs: registra propostas e checkpoint de homologação
+- 6569f1d8d test: prepara homologação real de propostas no Geral 1
+- c39ed46d5 style: preserva formatação das traduções existentes
+- 58f361ace feat: implementa propostas opcionais e PDF versionado
+- fff656ebe feat: adiciona schema e proteção de propostas opcionais
+- 0dc21e867 docs: audita infraestrutura de propostas
