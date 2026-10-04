@@ -1,3 +1,4 @@
+import { verifyAutomationScripts } from "./verify-automation-scripts.mjs";
 import { verifyProposals } from "./verify-proposals.mjs";
 import { verifyReportingForecast } from "./verify-reporting-forecast.mjs";
 import { verifyB2BSimple } from "./verify-b2b-simple.mjs";
@@ -44,12 +45,13 @@ let phase = "preflight",
   storagePath,
   storageOwner,
   passed = false;
+const automationsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Automations";
 const commercialSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Commercial";
 const proposalsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Proposals";
 const forecastSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Forecast";
 const b2bSuite = process.env.CRM_GERAL_VERIFY_SUITE === "B2B";
 const tagsSuite = process.env.CRM_GERAL_VERIFY_SUITE === "Tags";
-const dir = proposalsSuite ? ".local-dev/bloco-f" : forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
+const dir = automationsSuite ? ".local-dev/bloco-g" : proposalsSuite ? ".local-dev/bloco-f" : forecastSuite ? ".local-dev/bloco-e" : b2bSuite ? ".local-dev/bloco-d" : tagsSuite ? ".local-dev/bloco-c" : commercialSuite ? ".local-dev/bloco-b" : ".local-dev/d2";
 function requireResult(result, label) {
   lastCheck = label;
   if (result.error) {
@@ -603,6 +605,11 @@ try {
       done,
     });
   }
+  let scriptsProof;
+  if (automationsSuite) {
+    phase = "automations-scripts-journey";
+    scriptsProof = await verifyAutomationScripts({admin,a,b,viewer,agent,anon,orgA,orgB,contact,desktop,mobile,app,dir,requireResult,insist,done,getDiagnostic:()=>({check:lastCheck,code:failureCode,reason:failureReason})});
+  }
   let tagsProof;
   if (tagsSuite) {
     phase = "tags-journey";
@@ -656,6 +663,10 @@ try {
     insist((await a.client.rpc("fn_crm_company_manage",{p_org:orgA,p_action:"create",p_data:{name:"AAL1 bloqueada"}})).error?.code==="42501","D MFA AAL1 catálogo bloqueado");
     insist((await a.client.from("contacts").update({company_id:b2bProof.company_id}).eq("organization_id",orgA).eq("id",b2bProof.contact_id)).error?.code==="42501","D MFA AAL1 vínculo bloqueado");
   }
+  if (automationsSuite) {
+    insist((await a.client.rpc('fn_script_command',{p_org:orgA,p_command:{action:'create',definition:scriptsProof.definition},p_request:randomUUID()})).error?.code==='42501','G MFA AAL1 roteiro bloqueado');
+    insist((await a.client.from('automation_rules').update({name:'Regra fictícia AAL1'}).eq('organization_id',orgA).eq('id',scriptsProof.rule_id)).error?.code==='42501','G MFA AAL1 regra bloqueada');
+  }
   if (proposalsSuite) insist((await a.client.rpc('fn_proposal_command',{p_org:orgA,p_action:'create',p_data:{title:'MFA fictícia F',currency:'BRL',items:[{description:'Fictício',quantity:'1',unit_price_cents:'1'}]},p_request:randomUUID()})).error?.code==='42501','F MFA AAL1 mutação bloqueada');
   if (proposalsSuite) insist((await a.client.rpc("fn_set_capability",{p_org:orgA,p_capability:"proposals",p_enabled:true})).error?.code==="42501","F MFA AAL1 capability bloqueada");
   // Uma nova janela de TOTP evita rejeição de reuso do código anterior.
@@ -689,6 +700,11 @@ try {
     requireResult(await a.client.rpc("fn_set_capability",{p_org:orgA,p_capability:"proposals",p_enabled:true}),"F MFA AAL2 capability permitida");
     requireResult(await a.client.rpc('fn_proposal_command',{p_org:orgA,p_action:'create',p_data:{title:'MFA fictícia F',currency:'BRL',items:[{description:'Fictício',quantity:'1',unit_price_cents:'1'}]},p_request:randomUUID()}),'F MFA AAL2 mutação permitida');
     done("Bloco F: MFA real AAL1 bloqueia capability/mutação e AAL2 permite ambos");
+  }
+  if (automationsSuite) {
+    requireResult(await a.client.rpc('fn_script_command',{p_org:orgA,p_command:{action:'create',definition:scriptsProof.definition},p_request:randomUUID()}),'G MFA AAL2 roteiro permitido');
+    requireResult(await a.client.from('automation_rules').update({name:'Regra fictícia AAL2'}).eq('organization_id',orgA).eq('id',scriptsProof.rule_id).select('id').single(),'G MFA AAL2 regra permitida');
+    done('Bloco G: MFA real AAL1 bloqueia roteiro/regra e AAL2 permite ambos');
   }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;

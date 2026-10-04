@@ -34,3 +34,7 @@ Para abrir o app usando o mesmo mecanismo de entrada oculta:
 ```
 
 Esse modo usa a porta 3000 e permanece ativo até ser encerrado no terminal. O comando comum `pnpm dev` continua dependendo da configuração do ambiente; o iniciador não altera `.env*`. A existência do iniciador não equivale à homologação aprovada: consulte os relatórios D2 e o resultado efetivamente produzido.
+
+## Bloco G: sessão automática segura
+
+Execute `./scripts/supabase/start-geral-1.ps1 -Prompt -Suite Automations -Mode AgentLoop`. As chaves são recebidas de forma oculta e permanecem na memória do terminal por até 60 minutos. Mantenha-o aberto durante a homologação; Ctrl+C encerra a sessão. O agente pode solicitar apenas execução da suíte fixa ou encerramento, sem fornecer comandos arbitrários. Resultados sanitizados e capturas fictícias ficam em `.local-dev/bloco-g/`, ignorado pelo Git. A suíte reutiliza D2 e testa regras/tags, roteiro de três passos, falha e retomada, edição com snapshot, desktop/mobile, JWT A/B e MFA. Não valida instalação limpa/update da distribuição.

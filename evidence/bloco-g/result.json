@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "project": "Geral 1",
+  "suite": "Automations",
+  "run": "32e3ba54-2518-4344-b5aa-3869622ac8ab",
+  "finished_at": "2026-10-04T03:57:04.788Z",
+  "passed": true,
+  "checks": [
+    "Auth real: bootstrap, login, getUser e refresh",
+    "REST: leitura própria, isolamento A/B e acesso anônimo negado",
+    "RLS/REST/RPC: A/B, anon, viewer, agent, service role, flags e histórico",
+    "Storage real: upload, leitura, signed URL, cross-tenant e remoção",
+    "Realtime real: evento crm_leads e negação cross-tenant",
+    "App contra Geral 1: jornada, API, teclado/foco, 1440x900 e 390x844, viewer",
+    "Bloco G: evento real → condição → add_tag existente; falha, retry e replay com uma atribuição/recibo; aliases e referência A/B",
+    "Bloco G: roteiro de três passos pela tela, erro/retry, edição com snapshot, interrupção/retomada/conclusão, desktop/mobile/teclado e histórico desligado; JWT A/B/RBAC",
+    "Bloco G: MFA real AAL1 bloqueia roteiro/regra e AAL2 permite ambos",
+    "MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login"
+  ],
+  "fixtures_cleaned": true,
+  "independent_cleanup": {
+    "organizations_remaining": 0,
+    "users_remaining": 0,
+    "sessions_remaining": 0,
+    "storage_remaining": 0,
+    "script_sessions_remaining": 0,
+    "rules_remaining": 0
+  },
+  "scope": "Fixtures fictícias próprias; Auth/REST/RLS/Storage/Realtime reais; regras/tags/roteiros/UI/MFA. Não certifica install/update da distribuição."
+}
