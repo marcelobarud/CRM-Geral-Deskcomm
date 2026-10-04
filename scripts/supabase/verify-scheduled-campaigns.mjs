@@ -96,9 +96,9 @@ export async function verifyScheduledCampaigns({
       display_name: `Contato fictício campanha H ${serial}`,
       phone_number: `+1555000${phoneSeed}${serial}`,
       consent: { marketing: { granted_at: new Date().toISOString(), source: "campaign-test", version: run } },
+      is_blocked: index === 2,
     };
     if (index === 1) contact.consent = { marketing: { granted_at: null, declined_at: new Date().toISOString(), source: "campaign-test", version: run } };
-    if (index === 2) contact.is_blocked = true;
     if (index === 3) contact.consent = {};
     return contact;
   });
