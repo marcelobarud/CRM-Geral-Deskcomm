@@ -21,6 +21,7 @@ import { getAction } from "@/lib/automation/actions";
 import type { ActionResultDetail } from "@/lib/automation/types";
 import { audit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
+import { createHash } from "node:crypto";
 
 export const AUTOMATION_CONSUMER_KEY = "automation-rules";
 
@@ -40,7 +41,10 @@ interface RuleRow {
 }
 
 /** Hidrata o contexto avaliado pelas condições/ações a partir do entity do evento. */
-export async function buildContext(admin: SupabaseClient, row: EventRow): Promise<Record<string, unknown>> {
+export async function buildContext(
+  admin: SupabaseClient,
+  row: EventRow,
+): Promise<Record<string, unknown>> {
   const context: Record<string, unknown> = { event: row.payload };
   // Admin client bypassa RLS — todo lookup filtra organization_id do evento
   // (doutrina multi-tenant; um FK cross-org corrompido nunca vaza pro contexto).
@@ -83,6 +87,32 @@ export async function buildContext(admin: SupabaseClient, row: EventRow): Promis
         .maybeSingle();
       if (contact) context.contact = contact;
     }
+  }
+  // UUIDs canônicos + identidades mescladas ainda referenciadas por regras.
+  for (const [key, kind] of [
+    ["lead", "lead"],
+    ["contact", "contact"],
+  ] as const) {
+    const entity = context[key] as { id?: string; tag_ids?: string[] } | undefined;
+    if (!entity?.id) continue;
+    const assignments = await admin
+      .from("crm_tag_assignments")
+      .select("tag_id")
+      .eq("organization_id", org)
+      .eq("entity_kind", kind)
+      .eq("entity_id", entity.id);
+    if (assignments.error) throw new Error("automation_tags_context_unavailable");
+    const ids = (assignments.data ?? []).map((a) => a.tag_id);
+    if (ids.length) {
+      const merged = await admin
+        .from("crm_tags")
+        .select("id")
+        .eq("organization_id", org)
+        .in("merged_into", ids);
+      if (merged.error) throw new Error("automation_tags_context_unavailable");
+      ids.push(...(merged.data ?? []).map((t) => t.id));
+    }
+    entity.tag_ids = ids;
   }
   return context;
 }
@@ -140,15 +170,19 @@ export async function runAutomationForEvent(
   const serviceBoundaries = new Map<string, Promise<ServiceBoundary>>();
   const requestId = row.metadata?.request_id;
   const causedByRule =
-    Boolean(row.metadata?.caused_by_rule) || (typeof requestId === "string" && requestId.startsWith("rule:"));
+    Boolean(row.metadata?.caused_by_rule) ||
+    (typeof requestId === "string" && requestId.startsWith("rule:"));
   if (causedByRule) {
     return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "skipped", detail: "caused_by_rule" };
   }
 
   const expectedKind = EXPECTED_ENTITY_KIND[row.event_type];
   if (expectedKind && row.entity_kind !== expectedKind) {
-  
-    return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "skipped", detail: "entity_kind_mismatch" };
+    return {
+      consumer_key: AUTOMATION_CONSUMER_KEY,
+      status: "skipped",
+      detail: "entity_kind_mismatch",
+    };
   }
 
   const { data: rules, error } = await admin
@@ -167,10 +201,17 @@ export async function runAutomationForEvent(
   }
 
   const context = await buildContext(admin, row);
+  let safeFailure = false;
   const applicable = matched.filter((r) => evaluateConditions(r.conditions ?? [], context));
   if (!applicable.length) {
     return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok", detail: "no_match" };
   }
+
+  // Somente efeitos transacionais de tags têm replay comprovadamente seguro.
+  // Regras mistas mantêm a falha observável, sem redrive automático de HTTP/envio.
+  const safeReplay = applicable.every((rule) =>
+    rule.actions.every((action) => action.type === "add_tag"),
+  );
 
   // Pré-checagem de postpone (throttle etc.): all-or-nothing ANTES de executar
   // qualquer ação — reexecução parcial no retry seria pior que atraso.
@@ -179,7 +220,16 @@ export async function runAutomationForEvent(
       const executor = getAction(action.type);
       if (!executor?.postponeUntil) continue;
       const until = await executor.postponeUntil(
-        { admin, serviceBoundaries, organizationId: row.organization_id, ruleId: rule.id, ruleName: rule.name, event: row, context, requestId: row.id },
+        {
+          admin,
+          serviceBoundaries,
+          organizationId: row.organization_id,
+          ruleId: rule.id,
+          ruleName: rule.name,
+          event: row,
+          context,
+          requestId: row.id,
+        },
         action.config ?? {},
       );
       if (until) {
@@ -195,7 +245,38 @@ export async function runAutomationForEvent(
 
   for (const rule of applicable) {
     const results: ActionResultDetail[] = [];
-    for (const action of rule.actions ?? []) {
+    const previous = await admin
+      .from("automation_rule_runs")
+      .select("actions_result")
+      .eq("organization_id", row.organization_id)
+      .eq("rule_id", rule.id)
+      .eq("event_id", row.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (previous.error)
+      return {
+        consumer_key: AUTOMATION_CONSUMER_KEY,
+        status: "error",
+        detail: "automation_checkpoint_unavailable",
+      };
+    const previousResults = (previous.data?.actions_result ??
+      []) as unknown as ActionResultDetail[];
+    for (const [actionIndex, action] of (rule.actions ?? []).entries()) {
+      const hash = createHash("sha256").update(JSON.stringify(action)).digest("hex");
+      const prior = previousResults.find(
+        (r) => r.action_index === actionIndex && r.type === action.type,
+      );
+      // Ações externas não são repetidas pelo retry de outra ação. Reenvio
+      // explícito conserva o contrato próprio; add_tag tem recibo transacional.
+      if (prior && action.type !== "add_tag") {
+        results.push(
+          prior.config_hash === hash
+            ? prior
+            : { ...prior, status: "skipped", error: "action_changed_after_attempt" },
+        );
+        continue;
+      }
       const executor = getAction(action.type);
       if (!executor) {
         results.push({ type: action.type, status: "failed", error: "unknown_action" });
@@ -204,17 +285,32 @@ export async function runAutomationForEvent(
       try {
         results.push(
           await executor.execute(
-            { admin, serviceBoundaries, organizationId: row.organization_id, ruleId: rule.id, ruleName: rule.name, event: row, context, requestId: row.id },
+            {
+              admin,
+              serviceBoundaries,
+              organizationId: row.organization_id,
+              ruleId: rule.id,
+              ruleName: rule.name,
+              event: row,
+              context,
+              requestId: row.id,
+              actionIndex,
+            },
             action.config ?? {},
           ),
         );
-      } catch (err) {
+      } catch {
         results.push({
           type: action.type,
           status: "failed",
-          error: err instanceof Error ? err.message : String(err),
+          error: "action_execution_failed",
         });
       }
+      const result = results[results.length - 1];
+      if (!result) continue;
+      result.action_index = actionIndex;
+      result.config_hash = hash;
+      if (action.type === "add_tag" && result.status === "failed") safeFailure = true;
     }
 
     // ═══ O AGREGADOR TAMBÉM PRECISA DIZER A VERDADE ═══
@@ -250,7 +346,9 @@ export async function runAutomationForEvent(
     // A ordem importa: falha (+ skip) vence adiamento. Uma regra em que uma
     // ação falhou/pulou e outra ficou esperando é `partial` — quem lê precisa
     // saber que algo quebrou, não que está tudo a caminho.
-    const naoEnviadas = results.filter((r) => r.status === "failed" || r.status === "skipped").length;
+    const naoEnviadas = results.filter(
+      (r) => r.status === "failed" || r.status === "skipped",
+    ).length;
     const adiados = results.filter((r) => r.status === "postponed").length;
     const status =
       naoEnviadas > 0
@@ -271,7 +369,16 @@ export async function runAutomationForEvent(
       })
       .select("id")
       .maybeSingle();
-    if (runErr) logger.error("[automation.engine] run insert failed", { error: runErr.message });
+    if (runErr) {
+      logger.error("[automation.engine] run insert failed", { code: runErr.code });
+      return {
+        consumer_key: AUTOMATION_CONSUMER_KEY,
+        status: safeReplay ? "error" : "skipped",
+        detail: safeReplay
+          ? "automation_run_not_recorded"
+          : "automation_external_result_unconfirmed",
+      };
+    }
 
     // Audit só em falha/partial (spec §9) — não inflar audit em toda run.
     if (status !== "success") {
@@ -286,12 +393,22 @@ export async function runAutomationForEvent(
 
     // run_count sem RPC de increment: read-modify-write é aceitável aqui
     // (contador informativo de UI, não invariante).
-    const { data: cur } = await admin.from("automation_rules").select("run_count").eq("id", rule.id).maybeSingle();
+    const { data: cur } = await admin
+      .from("automation_rules")
+      .select("run_count")
+      .eq("id", rule.id)
+      .eq("organization_id", row.organization_id)
+      .maybeSingle();
     await admin
       .from("automation_rules")
       .update({ last_run_at: new Date().toISOString(), run_count: (cur?.run_count ?? 0) + 1 })
-      .eq("id", rule.id);
+      .eq("id", rule.id)
+      .eq("organization_id", row.organization_id);
   }
 
-  return { consumer_key: AUTOMATION_CONSUMER_KEY, status: "ok" };
+  return {
+    consumer_key: AUTOMATION_CONSUMER_KEY,
+    status: safeFailure && safeReplay ? "error" : "ok",
+    ...(safeFailure ? { detail: "automation_safe_action_failed" } : {}),
+  };
 }

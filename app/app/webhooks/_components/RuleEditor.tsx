@@ -1,5 +1,8 @@
 "use client";
+import { useAuth } from "@/hooks/auth/AuthProvider";
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -54,7 +57,7 @@ interface CuratedField {
 
 const LEAD_FIELDS: CuratedField[] = [
   { value: "lead.title", label: "Nome do lead", op: "eq" },
-  { value: "lead.tags", label: "Tags do lead", op: "contains" },
+  { value: "lead.tag_ids", label: "Tag do catálogo na oportunidade", op: "contains" },
   // utm_* entram pelo webhook em source_metadata (decisão da rota inbound),
   // não em custom_fields — o path aqui tem que apontar pra onde o dado mora.
   { value: "lead.source_metadata.utm_source", label: "Origem (utm_source)", op: "eq" },
@@ -67,7 +70,7 @@ const STAGE_FIELD: CuratedField = {
 };
 const MESSAGE_FIELDS: CuratedField[] = [
   { value: "event.body_preview", label: "Texto da mensagem", op: "contains" },
-  { value: "contact.tags", label: "Tags do contato", op: "contains" },
+  { value: "contact.tag_ids", label: "Tag do catálogo no contato", op: "contains" },
 ];
 const TAG_ADDED_FIELD: CuratedField = {
   value: "event.added_tags",
@@ -94,6 +97,13 @@ function emptyCondition(): ConditionRow {
 
 export function RuleEditor({ open, onOpenChange, rule }: Props) {
   const t = useT();
+  const { activeOrg } = useAuth();
+  const tagsQuery = useQuery({
+    queryKey: ["automation-tag-catalog", activeOrg?.orgId],
+    queryFn: () =>
+      apiClient.get<{ data: { tags: { id: string; name: string }[] } }>("/api/v1/tags"),
+    enabled: open,
+  });
   const isEdit = !!rule;
   const [name, setName] = React.useState("");
   const [triggerEvent, setTriggerEvent] = React.useState<TriggerEvent | "">("");
@@ -304,6 +314,22 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : cond.field.endsWith(".tag_ids") ? (
+                      <label className="flex-1 basis-40">
+                        {t("Tag do catálogo")}
+                        <select
+                          className="w-full rounded-md border bg-background p-2"
+                          value={cond.value}
+                          onChange={(e) => updateCondition(idx, { value: e.target.value })}
+                        >
+                          <option value="">{t("Selecione uma tag")}</option>
+                          {tagsQuery.data?.data.tags.map((tag) => (
+                            <option key={tag.id} value={tag.id}>
+                              {tag.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     ) : (
                       <Input
                         className="flex-1 basis-40"
@@ -325,9 +351,7 @@ export function RuleEditor({ open, onOpenChange, rule }: Props) {
                   <button
                     type="button"
                     className="text-xs text-muted-foreground underline underline-offset-4"
-                    onClick={() =>
-                      setAdvancedRows((prev) => ({ ...prev, [idx]: !isAdvanced }))
-                    }
+                    onClick={() => setAdvancedRows((prev) => ({ ...prev, [idx]: !isAdvanced }))}
                   >
                     {isAdvanced ? t("usar campo da lista") : t("usar campo avançado")}
                   </button>

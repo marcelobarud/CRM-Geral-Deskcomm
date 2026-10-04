@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/hooks/auth/AuthProvider";
 
 import { useT } from "@/hooks/i18n/useT";
 import * as React from "react";
@@ -29,7 +30,7 @@ export type ActionItem =
       type: "send_ai_message";
       config: { agent_id: string; channel_session_id: string; instruction: string };
     }
-  | { type: "add_tag"; config: { tags: string[] } }
+  | { type: "add_tag"; config: { tags: string[] } | { tag_ids: string[] } }
   | { type: "assign_owner"; config: { user_id: string } }
   | { type: "call_webhook"; config: { url: string; secret?: string; secret_enc?: string } }
   | { type: "start_message_flow"; config: { flow_pointer_id: string } };
@@ -43,7 +44,7 @@ export function defaultActionConfig(type: ActionItem["type"]): ActionItem {
     case "send_ai_message":
       return { type, config: { agent_id: "", channel_session_id: "", instruction: "" } };
     case "add_tag":
-      return { type, config: { tags: [] } };
+      return { type, config: { tag_ids: [] } };
     case "assign_owner":
       return { type, config: { user_id: "" } };
     case "call_webhook":
@@ -164,7 +165,9 @@ function SendWhatsappForm({
         </Select>
         {(sessions ?? []).some((s) => s.status !== "WORKING") ? (
           <p className="text-xs text-muted-foreground">
-            {t("Números desconectados aparecem desabilitados — reconecte em Conexões antes de usar.")}
+            {t(
+              "Números desconectados aparecem desabilitados — reconecte em Conexões antes de usar.",
+            )}
           </p>
         ) : null}
       </div>
@@ -194,7 +197,9 @@ function SendWhatsappForm({
           {/* NÃO cravar "7h e 22h": a janela passou a vir dos ajustes DO NÚMERO
               (Conexões), no fuso da sua organização, e quem a mudou lá veria a
               tela continuar prometendo outro horário. Rótulo visível é contrato. */}
-          {t("Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.")}
+          {t(
+            "Respeitamos a janela de envio e o limite diário configurados para esse número em Conexões — fora da janela, a mensagem espera a próxima.",
+          )}
         </p>
       </div>
     </div>
@@ -228,10 +233,7 @@ function SendAiMessageForm({
     <div className="space-y-3">
       <div className="space-y-1">
         <Label>{t("Qual agente escreve")}</Label>
-        <Select
-          value={config.agent_id}
-          onValueChange={(v) => onChange({ ...config, agent_id: v })}
-        >
+        <Select value={config.agent_id} onValueChange={(v) => onChange({ ...config, agent_id: v })}>
           <SelectTrigger>
             <SelectValue placeholder={t("Escolha o agente")} />
           </SelectTrigger>
@@ -245,7 +247,9 @@ function SendAiMessageForm({
         </Select>
         <p className="text-xs text-muted-foreground">
           {semPublicado
-            ? t("Nenhum agente está publicado. Publique um em Agentes de IA para poder usá-lo aqui.")
+            ? t(
+                "Nenhum agente está publicado. Publique um em Agentes de IA para poder usá-lo aqui.",
+              )
             : t("Ele escreve com o mesmo tom e o mesmo conhecimento que usa no atendimento.")}
         </p>
       </div>
@@ -283,16 +287,52 @@ function SendAiMessageForm({
           }
         />
         <p className="text-xs text-muted-foreground">
-          {t("O agente já sabe que é a PRIMEIRA mensagem, logo depois de a pessoa preencher o formulário, e recebe todos os campos que ela respondeu. Aqui você diz o que fazer com eles — quanto mais concreto, melhor a mensagem.")}
+          {t(
+            "O agente já sabe que é a PRIMEIRA mensagem, logo depois de a pessoa preencher o formulário, e recebe todos os campos que ela respondeu. Aqui você diz o que fazer com eles — quanto mais concreto, melhor a mensagem.",
+          )}
         </p>
       </div>
     </div>
   );
 }
 
-function AddTagForm({ config, onChange }: FormProps<{ tags: string[] }>) {
+function AddTagForm({ config, onChange }: FormProps<{ tags: string[] } | { tag_ids: string[] }>) {
   const t = useT();
-  const [text, setText] = React.useState(config.tags.join(", "));
+  const { activeOrg } = useAuth();
+  const query = useQuery({
+    queryKey: ["automation-tag-catalog", activeOrg?.orgId],
+    queryFn: () =>
+      apiClient.get<{ data: { tags: { id: string; name: string }[] } }>("/api/v1/tags"),
+  });
+  const [text, setText] = React.useState("tags" in config ? config.tags.join(", ") : "");
+  if ("tag_ids" in config)
+    return (
+      <fieldset className="space-y-2">
+        <legend>{t("Tags do catálogo")}</legend>
+        {query.isLoading && <p>{t("Carregando tags…")}</p>}
+        {query.isError && (
+          <Button type="button" onClick={() => void query.refetch()}>
+            {t("Tentar ler tags novamente")}
+          </Button>
+        )}
+        {query.data?.data.tags.map((tag) => (
+          <label key={tag.id} className="flex gap-2">
+            <input
+              type="checkbox"
+              checked={config.tag_ids.includes(tag.id)}
+              onChange={(e) =>
+                onChange({
+                  tag_ids: e.target.checked
+                    ? [...config.tag_ids, tag.id]
+                    : config.tag_ids.filter((id) => id !== tag.id),
+                })
+              }
+            />
+            {tag.name}
+          </label>
+        ))}
+      </fieldset>
+    );
   return (
     <div className="space-y-1">
       <Label>{t("Tags (separadas por vírgula)")}</Label>
@@ -365,12 +405,18 @@ function CallWebhookForm({
             const { secret_enc: _enc, ...rest } = config;
             onChange(next ? { ...rest, secret: next } : { ...rest, secret: undefined });
           }}
-          placeholder={hasStoredSecret ? "•••••••• (definido — digite para trocar)" : "uma senha só sua"}
+          placeholder={
+            hasStoredSecret ? "•••••••• (definido — digite para trocar)" : "uma senha só sua"
+          }
         />
         <p className="text-xs text-muted-foreground">
           {hasStoredSecret
-            ? t("Já existe um segredo guardado com segurança. Digitar aqui substitui; limpar remove.")
-            : t("Se preencher, enviaremos uma assinatura para o outro sistema conferir que fomos nós.")}
+            ? t(
+                "Já existe um segredo guardado com segurança. Digitar aqui substitui; limpar remove.",
+              )
+            : t(
+                "Se preencher, enviaremos uma assinatura para o outro sistema conferir que fomos nós.",
+              )}
         </p>
       </div>
     </div>

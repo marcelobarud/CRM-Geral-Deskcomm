@@ -7,6 +7,8 @@ export interface ActionResultDetail {
   status: "success" | "failed" | "skipped" | "postponed";
   error?: string;
   detail?: Record<string, unknown>;
+  action_index?: number;
+  config_hash?: string;
 }
 
 export interface ActionCtx {
@@ -20,6 +22,7 @@ export interface ActionCtx {
   event: EventRow;
   context: Record<string, unknown>; // mesmo objeto avaliado pelas condições
   requestId: string;
+  actionIndex?: number;
 }
 
 export interface ActionExecutor {
