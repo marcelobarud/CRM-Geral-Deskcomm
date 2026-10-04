@@ -1,0 +1,48 @@
+begin;
+do $probe$
+declare org uuid:=gen_random_uuid(); other_org uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid();
+ contact uuid:=gen_random_uuid(); channel uuid:=gen_random_uuid(); conversation uuid:=gen_random_uuid();
+ script jsonb; session jsonb; replay jsonb; definition jsonb; command jsonb; request uuid:=gen_random_uuid();
+ first_step uuid:=gen_random_uuid(); second_step uuid:=gen_random_uuid(); third_step uuid:=gen_random_uuid();
+ tag jsonb; rule uuid:=gen_random_uuid(); event uuid; result jsonb;
+begin
+ insert into public.organizations(id,slug,legal_name,display_name) values(org,'g-probe-'||org,'Fictícia G','Fictícia G'),(other_org,'g-probe-'||other_org,'Fictícia B','Fictícia B');
+ insert into auth.users(id,email,raw_user_meta_data) values(actor,'g-probe-'||actor||'@example.invalid','{}');
+ insert into public.user_organizations(user_id,organization_id,role,accepted_at) values(actor,org,'admin',now());
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
+ insert into public.contacts(id,organization_id,name) values(contact,org,'Contato fictício original');
+ insert into public.channel_sessions(id,organization_id,waha_session_name,webhook_secret_encrypted,status) values(channel,org,'g-ficticio-'||channel,decode('00','hex'),'STOPPED');
+ insert into public.conversations(id,organization_id,contact_id,channel_session_id,status) values(conversation,org,contact,channel,'pending');
+ definition:=jsonb_build_object('name','Coleta fictícia','description','Teste','is_active',true,'steps',jsonb_build_array(
+ jsonb_build_object('id',first_step,'type','text','prompt','Necessidade?'),jsonb_build_object('id',second_step,'type','choice','prompt','Preferência?','options',jsonb_build_array('A','B')),jsonb_build_object('id',third_step,'type','confirmation','prompt','Confirmar?')));
+ command:=jsonb_build_object('action','create','definition',definition);
+ begin perform public.fn_script_command(org,command,request);raise exception 'disabled_allowed';exception when insufficient_privilege then null;end;
+ perform public.fn_set_capability(org,'short_scripts',true);
+ script:=public.fn_script_command(org,command,request); replay:=public.fn_script_command(org,command,request);
+ if script->>'id'<>replay->>'id' then raise exception 'creation_replayed';end if;
+ session:=public.fn_script_command(org,jsonb_build_object('action','start','script_id',script->>'id','conversation_id',conversation),gen_random_uuid());
+ session:=public.fn_script_command(org,jsonb_build_object('action','answer','id',session->>'id','expected_revision',1,'step_id',first_step,'answer','Fictício preservado'),gen_random_uuid());
+ begin perform public.fn_script_command(org,jsonb_build_object('action','answer','id',session->>'id','expected_revision',2,'step_id',second_step,'answer','C'),gen_random_uuid());raise exception 'invalid_choice_allowed';exception when invalid_parameter_value then null;end;
+ perform public.fn_script_command(org,jsonb_build_object('action','update','id',script->>'id','expected_revision',1,'definition',jsonb_set(definition,'{steps,0,prompt}','"Pergunta nova?"')),gen_random_uuid());
+ if session->'snapshot'->'steps'->0->>'prompt'<>'Necessidade?' then raise exception 'snapshot_mutated';end if;
+ update public.conversations set bot_silenced_until='infinity' where id=conversation and organization_id=org;
+ select to_jsonb(v) into session from public.crm_script_sessions v where id=(session->>'id')::uuid;
+ if session->>'status'<>'interrupted' or session->'answers'->>first_step::text<>'Fictício preservado' then raise exception 'handoff_lost_context';end if;
+ session:=public.fn_script_command(org,jsonb_build_object('action','resume','id',session->>'id','expected_revision',3),gen_random_uuid());
+ session:=public.fn_script_command(org,jsonb_build_object('action','answer','id',session->>'id','expected_revision',4,'step_id',second_step,'answer','A'),gen_random_uuid());
+ session:=public.fn_script_command(org,jsonb_build_object('action','answer','id',session->>'id','expected_revision',5,'step_id',third_step,'answer',false),gen_random_uuid());
+ if session->>'status'<>'completed' or (select count(*) from jsonb_object_keys(session->'answers'))<>3 then raise exception 'completion_missing';end if;
+ if (select name from public.contacts where id=contact)<>'Contato fictício original' then raise exception 'canonical_contact_changed';end if;
+ begin perform public.fn_script_command(other_org,command,gen_random_uuid());raise exception 'cross_org_allowed';exception when insufficient_privilege then null;end;
+ tag:=public.fn_crm_tag_manage(org,'create',null,'Tag fictícia G');
+ insert into public.automation_rules(id,organization_id,name,trigger_event,conditions,actions,is_active) values(rule,org,'Regra fictícia','contact.tag_added','[]',jsonb_build_array(jsonb_build_object('type','add_tag','config',jsonb_build_object('tag_ids',jsonb_build_array(tag->>'tag_id')))),true);
+ event:=public.emit_event('contact.tag_added','contact',contact,'{}','{}',org);
+ perform set_config('request.jwt.claims',jsonb_build_object('role','service_role')::text,true);
+ result:=public.fn_automation_add_tag(org,rule,event,0,null); replay:=public.fn_automation_add_tag(org,rule,event,0,null);
+ if replay->>'replayed'<>'true' or (select count(*) from public.crm_tag_assignments where organization_id=org and tag_id=(tag->>'tag_id')::uuid and entity_id=contact)<>1 then raise exception 'tag_replay_duplicated';end if;
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
+ perform public.fn_set_capability(org,'short_scripts',false);
+ if not exists(select 1 from public.crm_script_sessions where organization_id=org and status='completed') then raise exception 'history_lost';end if;
+end $probe$;
+rollback;
+select true as automation_scripts_probe_passed;

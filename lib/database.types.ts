@@ -4567,6 +4567,108 @@ export type Database = {
           },
         ]
       }
+      crm_script_sessions: {
+        Row: {
+          answers: Json
+          conversation_id: string
+          created_at: string
+          current_step: number
+          id: string
+          interruption_reason: string | null
+          organization_id: string
+          revision: number
+          script_id: string
+          snapshot: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          conversation_id: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          interruption_reason?: string | null
+          organization_id: string
+          revision?: number
+          script_id: string
+          snapshot: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          conversation_id?: string
+          created_at?: string
+          current_step?: number
+          id?: string
+          interruption_reason?: string | null
+          organization_id?: string
+          revision?: number
+          script_id?: string
+          snapshot?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_script_sessions_conversation_id_organization_id_fkey"
+            columns: ["conversation_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "crm_script_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_script_sessions_organization_id_script_id_fkey"
+            columns: ["organization_id", "script_id"]
+            isOneToOne: false
+            referencedRelation: "crm_short_scripts"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      crm_short_scripts: {
+        Row: {
+          created_at: string
+          definition: Json
+          id: string
+          organization_id: string
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          definition: Json
+          id?: string
+          organization_id: string
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          definition?: Json
+          id?: string
+          organization_id?: string
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_short_scripts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_stages: {
         Row: {
           agent_stage_hint: string | null
@@ -8989,6 +9091,16 @@ export type Database = {
         Args: { p_from: string; p_org: string; p_owner?: string; p_to: string }
         Returns: Json
       }
+      fn_automation_add_tag: {
+        Args: {
+          p_event: string
+          p_index: number
+          p_org: string
+          p_origin?: Json
+          p_rule: string
+        }
+        Returns: Json
+      }
       fn_buscar_trechos_das_fontes: {
         Args: {
           p_embedding: string
@@ -9720,6 +9832,11 @@ export type Database = {
         Args: { p_conversation: string; p_org: string; p_reason: string }
         Returns: undefined
       }
+      fn_script_command: {
+        Args: { p_command: Json; p_org: string; p_request: string }
+        Returns: Json
+      }
+      fn_script_definition_valid: { Args: { p_data: Json }; Returns: boolean }
       fn_semear_tipos_de_agendamento: {
         Args: { p_organization_id: string }
         Returns: number

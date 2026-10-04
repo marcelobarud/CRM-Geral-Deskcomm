@@ -329,3 +329,8 @@ To re-apply on a fresh Supabase project, replay the migrations in version order 
 | `20261004009000` | `0265_proposals_receipts_guard` | Impede falsificação ou remoção direta de receipts de propostas no ledger compartilhado. |
 | `20261004010000` | `0266_proposals_receipts_syntax` | Corrige expressão LIKE do guard de receipts, confirmada pelo probe transacional. |
 | `20261004011000` | `0267_contact_format_patterns` | Corrige escapes de e-mail e E.164, preservando rejeição de valores inválidos. |
+| `20261004020000` | `0268_crm_geral_short_scripts` | Coleta curta opcional no atendimento; sessões com snapshot, RLS, retomada e ledger protegido, sem scheduler. |
+| `20261004021000` | `0269_automation_tag_replay` | Ação add_tag existente com identidade estável e recibo transacional por evento/regra/índice; retry relacional seguro. |
+| `20261004022000` | `0270_scripts_handoff_and_rule_guards` | Interrompe coleta na passagem humana existente e valida referências de tags das regras, suporte e MFA. |
+| `20261004023000` | `0271_automation_tag_reference_retention` | Protege exclusão de tags referenciadas por UUID/merge e preserva identidade de efeito sem TTL arbitrário. |
+| `20261004024000` | `0272_scripts_replay_scope_and_rule_delete` | Revalida visibilidade e role no replay de roteiros; remoção de regras exige MFA/suporte. |

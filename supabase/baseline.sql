@@ -25905,65 +25905,6 @@ end $$;
 revoke all on function public.fn_proposal_command(uuid,text,uuid,jsonb,uuid) from public,anon,service_role;
 grant execute on function public.fn_proposal_command(uuid,text,uuid,jsonb,uuid) to authenticated;
 
--- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
---
--- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
-
--- dele — quem o empurrar para o meio desarma a cura para tudo que vier depois.
--- Vigiado por `tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts`.
---
--- A 0108 revogou anon numa LISTA de 8 funções, medida num banco instalado do
--- ZERO. Quem ATUALIZA tem outro estado: o `ALTER DEFAULT PRIVILEGES ... GRANT
--- ALL ON FUNCTIONS TO anon` do corpo deste arquivo grava uma entrada em
--- `pg_default_acl` que fica no catálogo PARA SEMPRE, e a partir daí toda função
--- criada em `public` nasce com EXECUTE para anon — inclusive as deste apêndice.
---
--- Medido numa VPS real (2026-08-07), comparando com o que um install fresco
--- produz: 6 definer expostas a anon e 5 a authenticated, entre elas
--- `fn_decrypt_oauth` — alcançável pela anon key, que vai para o browser.
---
--- Lista conserta o estoque e reabre no próximo `create function`. Esta varredura
--- é auto-curativa e roda DEPOIS de tudo que cria função, então cura no mesmo run
--- em que o defeito nasceria. Desfazer o ALTER DEFAULT PRIVILEGES não serve: ele
--- vem do `pg_dump` do Supabase e é reescrito a cada re-aplicação.
---
--- As duas origens de EXECUTE (a mesma lição da 0108): grant DIRETO a anon, que
--- `revoke from public` não remove; e grant a PUBLIC, do qual anon HERDA, que
--- `revoke from anon` não remove. O privilégio EFETIVO de authenticated e
--- service_role é medido ANTES e devolvido depois — tira anon sem tirar leitura.
-do $$
-declare
-  f record;
-  tinha_auth boolean;
-  tinha_service boolean;
-begin
-  if to_regrole('anon') is null then
-    return;
-  end if;
-
-  for f in
-    select p.oid, p.oid::regprocedure as assinatura
-      from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public'
-       and p.prosecdef
-  loop
-    tinha_auth := to_regrole('authenticated') is not null
-                  and has_function_privilege('authenticated', f.oid, 'EXECUTE');
-    tinha_service := to_regrole('service_role') is not null
-                     and has_function_privilege('service_role', f.oid, 'EXECUTE');
-
-    execute format('revoke execute on function %s from public, anon', f.assinatura);
-
-    if tinha_auth then
-      execute format('grant execute on function %s to authenticated', f.assinatura);
-    end if;
-    if tinha_service then
-      execute format('grant execute on function %s to service_role', f.assinatura);
-    end if;
-  end loop;
-end $$;
-
 -- regra 2 (authenticated): as 5 que o update abriu e o install não abre. Aqui não
 
 -- 0261: ator canônico de propostas na timeline
@@ -26373,6 +26314,537 @@ alter table public.contacts drop constraint if exists contacts_email_format;
 alter table public.contacts add constraint contacts_email_format check (email is null or email ~* '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$');
 alter table public.contacts drop constraint if exists contacts_phone_e164_format;
 alter table public.contacts add constraint contacts_phone_e164_format check (phone_number is null or phone_number ~ '^[+][0-9]{8,15}$');
+
+-- ---- roteiros curtos (migration 0268) ----
+-- Coleta no atendimento, sem scheduler, envio ou promoção automática de dados.
+create table if not exists public.crm_short_scripts (
+ id uuid primary key default gen_random_uuid(),
+ organization_id uuid not null references public.organizations(id) on delete cascade,
+ definition jsonb not null, revision integer not null default 1 check(revision>0),
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ unique(organization_id,id)
+);
+create unique index if not exists conversations_id_org_scripts on public.conversations(id,organization_id);
+create table if not exists public.crm_script_sessions (
+ id uuid primary key default gen_random_uuid(),
+ organization_id uuid not null references public.organizations(id) on delete cascade,
+ script_id uuid not null, conversation_id uuid not null,
+ snapshot jsonb not null, status text not null default 'running' check(status in('running','interrupted','completed')),
+ current_step integer not null default 0 check(current_step>=0), answers jsonb not null default '{}',
+ interruption_reason text, revision integer not null default 1 check(revision>0),
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ foreign key(organization_id,script_id) references public.crm_short_scripts(organization_id,id) on delete cascade,
+ foreign key(conversation_id,organization_id) references public.conversations(id,organization_id) on delete cascade,
+ unique(organization_id,id)
+);
+create unique index if not exists crm_script_one_live_session on public.crm_script_sessions(organization_id,conversation_id) where status in('running','interrupted');
+create index if not exists crm_script_sessions_script on public.crm_script_sessions(organization_id,script_id);
+create index if not exists crm_script_sessions_conversation on public.crm_script_sessions(conversation_id,organization_id,created_at desc);
+alter table public.crm_short_scripts enable row level security;
+alter table public.crm_script_sessions enable row level security;
+revoke all on public.crm_short_scripts,public.crm_script_sessions from public,anon,authenticated,service_role;
+grant select on public.crm_short_scripts,public.crm_script_sessions to authenticated,service_role;
+drop policy if exists scripts_select on public.crm_short_scripts;
+create policy scripts_select on public.crm_short_scripts for select to authenticated using(public.fn_role_at_least(organization_id,'agent'));
+drop policy if exists script_sessions_select on public.crm_script_sessions;
+create policy script_sessions_select on public.crm_script_sessions for select to authenticated using(exists(select 1 from public.conversations c where c.id=conversation_id and c.organization_id=crm_script_sessions.organization_id));
+
+create or replace function public.fn_script_definition_valid(p_data jsonb) returns boolean
+language plpgsql immutable set search_path=public as $$
+declare s jsonb; n integer; ids text[]:='{}';
+begin
+ if jsonb_typeof(p_data) is distinct from 'object' or exists(select 1 from jsonb_object_keys(p_data) k where k not in('name','description','is_active','steps'))
+ or jsonb_typeof(p_data->'name') is distinct from 'string' or length(btrim(p_data->>'name')) not between 1 and 160
+ or jsonb_typeof(p_data->'description') is distinct from 'string' or length(p_data->>'description')>1000
+ or jsonb_typeof(p_data->'is_active') is distinct from 'boolean' or jsonb_typeof(p_data->'steps') is distinct from 'array' then return false; end if;
+ n:=jsonb_array_length(p_data->'steps'); if n not between 1 and 12 then return false; end if;
+ for s in select value from jsonb_array_elements(p_data->'steps') loop
+  if jsonb_typeof(s) is distinct from 'object' or jsonb_typeof(s->'prompt') is distinct from 'string'
+  or length(btrim(s->>'prompt')) not between 1 and 500 or coalesce(s->>'type','') not in('text','choice','confirmation')
+  or coalesce(s->>'id','') !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+  or (s->>'id')=any(ids) or exists(select 1 from jsonb_object_keys(s) k where k not in('id','type','prompt','options')) then return false; end if;
+  ids:=array_append(ids,s->>'id');
+  if s->>'type'='choice' then
+   if jsonb_typeof(s->'options') is distinct from 'array' then return false; end if;
+   if jsonb_array_length(s->'options') not between 2 and 6 or exists(select 1 from jsonb_array_elements(s->'options') o where jsonb_typeof(o) is distinct from 'string' or length(btrim(o#>>'{}')) not between 1 and 100)
+   or (select count(distinct value) from jsonb_array_elements(s->'options'))<>jsonb_array_length(s->'options') then return false; end if;
+  elsif s ? 'options' then return false; end if;
+ end loop;
+ return true;
+exception when others then return false;
+end $$;
+revoke all on function public.fn_script_definition_valid(jsonb) from public,anon,authenticated,service_role;
+
+-- Mantém fonte canônica da configuração, defaults e contrato do Bloco A/F.
+create or replace function public.fn_capability_enabled(p_org uuid,p_capability text) returns boolean
+language plpgsql stable security definer set search_path=public as $$
+declare c jsonb; v jsonb;
+begin
+ if p_capability is null or p_capability not in('message_templates','proposals','short_scripts') then return false; end if;
+ if auth.uid() is not null and not public.fn_role_at_least(p_org,'viewer') then return false; end if;
+ select settings->'capabilities' into c from public.organizations where id=p_org;
+ if not found then return false; end if;
+ if c is null or c='null'::jsonb then return p_capability='message_templates'; end if;
+ if jsonb_typeof(c) is distinct from 'object' or c->'version' is distinct from '1'::jsonb or jsonb_typeof(c->'revision') is distinct from 'number'
+ or coalesce(c->>'revision','') !~ '^[0-9]{1,16}$' or jsonb_typeof(c->'overrides') is distinct from 'object' then return false; end if;
+ if (c->>'revision')::numeric>9007199254740991 then return false; end if;
+ v:=c->'overrides'->p_capability;
+ if v is null then return p_capability='message_templates'; end if;
+ return v='true'::jsonb;
+end $$;
+revoke all on function public.fn_capability_enabled(uuid,text) from public,anon,authenticated,service_role;
+grant execute on function public.fn_capability_enabled(uuid,text) to authenticated,service_role;
+
+create or replace function public.fn_set_capability(p_org uuid,p_capability text,p_enabled boolean) returns jsonb
+language plpgsql security definer set search_path=public as $$
+declare c jsonb; overrides jsonb; revision bigint; previous boolean; previous_context text;
+begin
+ if auth.uid() is null or not public.fn_role_at_least(p_org,'admin') or not public.fn_support_write_allowed(p_org) or not public.fn_session_mfa_proven() then raise exception 'capability_forbidden' using errcode='42501'; end if;
+ if p_capability is null or p_capability not in('message_templates','proposals','short_scripts') or p_enabled is null then raise exception 'capability_invalid' using errcode='22023'; end if;
+ select settings->'capabilities' into c from public.organizations where id=p_org for update;
+ if not found then raise exception 'organization_not_found' using errcode='P0002'; end if;
+ previous:=public.fn_capability_enabled(p_org,p_capability); revision:=0;
+ if jsonb_typeof(c)='object' and c->'version'='1'::jsonb and jsonb_typeof(c->'revision')='number' and coalesce(c->>'revision','') ~ '^[0-9]{1,16}$' then
+  if (c->>'revision')::numeric<9007199254740991 then revision:=(c->>'revision')::bigint; end if;
+ end if;
+ overrides:=case when c->'version'='1'::jsonb and jsonb_typeof(c->'overrides')='object' then c->'overrides' else '{}'::jsonb end;
+ previous_context:=current_setting('crm.capabilities_write',true); perform set_config('crm.capabilities_write','1',true);
+ update public.organizations set settings=jsonb_set(coalesce(settings,'{}'),'{capabilities}',jsonb_build_object('version',1,'revision',revision+1,'overrides',overrides||jsonb_build_object(p_capability,p_enabled)),true) where id=p_org;
+ perform set_config('crm.capabilities_write',coalesce(previous_context,''),true);
+ return jsonb_build_object('previous_enabled',previous,'enabled',p_enabled,'revision',revision+1);
+end $$;
+revoke all on function public.fn_set_capability(uuid,text,boolean) from public,anon,authenticated,service_role;
+grant execute on function public.fn_set_capability(uuid,text,boolean) to authenticated;
+
+create or replace function public.fn_script_command(p_org uuid,p_command jsonb,p_request uuid) returns jsonb
+language plpgsql security definer set search_path=public as $$
+declare a text:=p_command->>'action'; d jsonb:=p_command->'definition'; chosen uuid;
+ s public.crm_short_scripts; v public.crm_script_sessions; c public.conversations;
+ step jsonb; answer jsonb; result jsonb; receipt public.idempotency_keys; fingerprint bytea;
+begin
+ if auth.uid() is null or not public.fn_role_at_least(p_org,'agent') or not public.fn_support_write_allowed(p_org)
+ or not public.fn_session_mfa_proven() or not public.fn_capability_enabled(p_org,'short_scripts') then raise exception 'script_forbidden' using errcode='42501'; end if;
+ if p_request is null or a is null or a not in('create','update','start','answer','interrupt','resume') then raise exception 'script_invalid' using errcode='22023'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('short-scripts:'||p_org::text,0));
+ fingerprint:=extensions.digest(p_command::text,'sha256');
+ select * into receipt from public.idempotency_keys where organization_id=p_org and key=p_request::text and endpoint='short-script:'||auth.uid()::text;
+ if found then
+  if receipt.request_hash is distinct from fingerprint then raise exception 'script_request_conflict' using errcode='23505'; end if;
+  return receipt.response_body;
+ end if;
+ if a in('create','update') then
+  if not public.fn_role_at_least(p_org,'manager') then raise exception 'script_manager_required' using errcode='42501'; end if;
+  if not public.fn_script_definition_valid(d) then raise exception 'script_definition_invalid' using errcode='22023'; end if;
+  if a='create' then
+   insert into public.crm_short_scripts(organization_id,definition) values(p_org,d) returning * into s;
+  else
+   select * into s from public.crm_short_scripts where id=(p_command->>'id')::uuid and organization_id=p_org for update;
+   if not found then raise exception 'script_unavailable' using errcode='23503'; end if;
+   if s.revision is distinct from (p_command->>'expected_revision')::integer then raise exception 'script_version_conflict' using errcode='23505'; end if;
+   update public.crm_short_scripts set definition=d,revision=revision+1,updated_at=now() where id=s.id and organization_id=p_org returning * into s;
+  end if;
+  result:=to_jsonb(s); chosen:=s.id;
+ else
+  if a='start' then
+   select * into s from public.crm_short_scripts where id=(p_command->>'script_id')::uuid and organization_id=p_org;
+   if not found or s.definition->'is_active' is distinct from 'true'::jsonb then raise exception 'script_disabled' using errcode='23503'; end if;
+   select * into c from public.conversations where id=(p_command->>'conversation_id')::uuid and organization_id=p_org;
+  else
+   select * into v from public.crm_script_sessions where id=(p_command->>'id')::uuid and organization_id=p_org for update;
+   if not found then raise exception 'script_session_unavailable' using errcode='23503'; end if;
+   select * into c from public.conversations where id=v.conversation_id and organization_id=p_org;
+   if v.revision is distinct from (p_command->>'expected_revision')::integer then raise exception 'script_version_conflict' using errcode='23505'; end if;
+  end if;
+  if c.id is null or not public.fn_can_view_conversation(p_org,c.assigned_to_user_id) then raise exception 'script_conversation_forbidden' using errcode='42501'; end if;
+  if a='start' then
+   insert into public.crm_script_sessions(organization_id,script_id,conversation_id,snapshot) values(p_org,s.id,c.id,s.definition) returning * into v;
+  elsif a='answer' then
+   if v.status<>'running' then raise exception 'script_not_running' using errcode='23505'; end if;
+   step:=v.snapshot->'steps'->v.current_step; answer:=p_command->'answer';
+   if step->>'id' is distinct from p_command->>'step_id' then raise exception 'script_step_conflict' using errcode='23505'; end if;
+   if step->>'type'='confirmation' then
+    if jsonb_typeof(answer) is distinct from 'boolean' then raise exception 'script_answer_invalid' using errcode='22023'; end if;
+   else
+    if jsonb_typeof(answer) is distinct from 'string' or length(btrim(answer#>>'{}')) not between 1 and 2000 then raise exception 'script_answer_invalid' using errcode='22023'; end if;
+    if step->>'type'='choice' and not (step->'options' @> jsonb_build_array(answer)) then raise exception 'script_choice_invalid' using errcode='22023'; end if;
+   end if;
+   update public.crm_script_sessions set answers=answers||jsonb_build_object(step->>'id',answer),current_step=current_step+1,
+    status=case when current_step+1=jsonb_array_length(snapshot->'steps') then 'completed' else 'running' end,
+    revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+  elsif a='interrupt' then
+   if v.status<>'running' or length(btrim(coalesce(p_command->>'reason',''))) not between 1 and 300 then raise exception 'script_interrupt_invalid' using errcode='22023'; end if;
+   update public.crm_script_sessions set status='interrupted',interruption_reason=p_command->>'reason',revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+   -- Coleta interrompida entrega contexto pela mesma conversa; não reativa IA.
+   update public.conversations set status=case when status='ai_handling' then 'pending' else status end,bot_silenced_until='infinity',last_handoff_at=now(),last_handoff_reason='Roteiro interrompido: contexto disponível no atendimento' where id=c.id and organization_id=p_org;
+  elsif a='resume' then
+   if v.status<>'interrupted' then raise exception 'script_resume_invalid' using errcode='23505'; end if;
+   update public.crm_script_sessions set status='running',revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+  end if;
+  result:=to_jsonb(v); chosen:=v.id;
+ end if;
+ insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+ values(p_org,auth.uid(),'short_script.'||a,'short_script',chosen,jsonb_build_object('status',result->>'status'));
+ insert into public.idempotency_keys(organization_id,key,endpoint,request_hash,status_code,response_body,expires_at)
+ values(p_org,p_request::text,'short-script:'||auth.uid()::text,fingerprint,200,result,now()+interval '24 hours');
+ return result;
+end $$;
+revoke all on function public.fn_script_command(uuid,jsonb,uuid) from public,anon,authenticated,service_role;
+grant execute on function public.fn_script_command(uuid,jsonb,uuid) to authenticated;
+
+create or replace function public.fn_script_receipt_guard() returns trigger language plpgsql set search_path=public as $$
+declare scoped boolean;
+begin
+ scoped:=case when TG_OP='DELETE' then old.endpoint like 'short-script:%' when TG_OP='INSERT' then new.endpoint like 'short-script:%' else old.endpoint like 'short-script:%' or new.endpoint like 'short-script:%' end;
+ if scoped and current_user not in('postgres','supabase_admin') then
+  if TG_OP='DELETE' and not exists(select 1 from public.organizations where id=old.organization_id) then return old; end if;
+  raise exception 'script_receipt_private' using errcode='42501';
+ end if;
+ if TG_OP='DELETE' then return old; end if; return new;
+end $$;
+revoke all on function public.fn_script_receipt_guard() from public,anon,authenticated,service_role;
+drop trigger if exists script_receipt_guard on public.idempotency_keys;
+create trigger script_receipt_guard before insert or update or delete on public.idempotency_keys for each row execute function public.fn_script_receipt_guard();
+
+-- ---- replay de tags de automação (migration 0269) ----
+-- Ação relacional atômica no motor existente; não é scheduler/engine novo.
+create or replace function public.fn_automation_add_tag(p_org uuid,p_rule uuid,p_event uuid,p_index integer,p_origin jsonb default null) returns jsonb
+language plpgsql security definer set search_path=public as $$
+declare r public.automation_rules; e public.event_log; a jsonb; cfg jsonb; chosen uuid; raw text;
+ target uuid; kind text; before_tags text[]; after_tags text[]; tag_ids uuid[]:='{}';
+ receipt public.idempotency_keys; fingerprint bytea; result jsonb; k text;
+begin
+ select * into r from public.automation_rules where id=p_rule and organization_id=p_org;
+ select * into e from public.event_log where id=p_event and organization_id=p_org;
+ if r.id is null or e.id is null or not r.is_active or r.trigger_event<>e.event_type or p_index<0 then raise exception 'automation_context_invalid' using errcode='23503'; end if;
+ a:=r.actions->p_index; cfg:=a->'config';
+ if a->>'type' is distinct from 'add_tag' then raise exception 'automation_action_invalid' using errcode='22023'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('crm-tags:'||p_org::text,0));
+ k:=p_event::text||':'||p_rule::text||':'||p_index::text; fingerprint:=extensions.digest(a::text,'sha256');
+ select * into receipt from public.idempotency_keys where organization_id=p_org and endpoint='automation-tag' and key=k;
+ if found then
+  if receipt.request_hash is distinct from fingerprint then raise exception 'automation_action_changed' using errcode='23505'; end if;
+  return receipt.response_body||jsonb_build_object('replayed',true);
+ end if;
+ if e.entity_kind='crm_lead' then
+  select id,tags into target,before_tags from public.crm_leads where id=e.entity_id and organization_id=p_org for update; kind:='lead';
+ elsif e.entity_kind='contact' then
+  select id,tags into target,before_tags from public.contacts where id=e.entity_id and organization_id=p_org for update; kind:='contact';
+ elsif e.entity_kind='message' then
+  select c.id,c.tags into target,before_tags from public.messages m join public.conversations v on v.id=m.conversation_id and v.organization_id=m.organization_id join public.contacts c on c.id=v.contact_id and c.organization_id=v.organization_id where m.id=e.entity_id and m.organization_id=p_org for update of c; kind:='contact';
+ end if;
+ if target is null then return jsonb_build_object('added','[]'::jsonb,'skipped',true); end if;
+ if cfg ? 'tag_ids' then
+  if jsonb_typeof(cfg->'tag_ids') is distinct from 'array' or jsonb_array_length(cfg->'tag_ids') not between 1 and 10 then raise exception 'automation_tags_invalid' using errcode='22023'; end if;
+  for raw in select value from jsonb_array_elements_text(cfg->'tag_ids') loop
+   select coalesce(merged_into,id) into chosen from public.crm_tags where organization_id=p_org and id=raw::uuid;
+   if chosen is null or not exists(select 1 from public.crm_tags where id=chosen and organization_id=p_org and not is_archived and merged_into is null) then raise exception 'automation_tag_unavailable' using errcode='23503'; end if;
+   tag_ids:=array_append(tag_ids,chosen);
+  end loop;
+ else
+  if jsonb_typeof(cfg->'tags') is distinct from 'array' or jsonb_array_length(cfg->'tags') not between 1 and 10 then raise exception 'automation_tags_invalid' using errcode='22023'; end if;
+  for raw in select value from jsonb_array_elements_text(cfg->'tags') loop
+   chosen:=public.fn_crm_tag_ensure_legacy(p_org,raw,true); tag_ids:=array_append(tag_ids,chosen);
+  end loop;
+ end if;
+ insert into public.crm_tag_assignments(organization_id,tag_id,entity_kind,entity_id)
+ select p_org,tag,kind,target from(select distinct unnest(tag_ids) tag) t on conflict do nothing;
+ if kind='lead' then select tags into after_tags from public.crm_leads where id=target and organization_id=p_org;
+ else select tags into after_tags from public.contacts where id=target and organization_id=p_org; end if;
+ result:=jsonb_build_object('added',coalesce((select jsonb_agg(t) from unnest(after_tags) t where not t=any(coalesce(before_tags,'{}'))),'[]'::jsonb));
+ if result->'added'<>'[]'::jsonb then
+  perform public.emit_event(case when kind='lead' then 'lead.tag_added' else 'contact.tag_added' end,case when kind='lead' then 'crm_lead' else 'contact' end,target,
+   jsonb_build_object('added_tags',result->'added','tags',after_tags,'tag_ids',tag_ids,'service_origin',p_origin),jsonb_build_object('caused_by_rule',p_rule),p_org);
+ end if;
+ insert into public.idempotency_keys(organization_id,key,endpoint,request_hash,status_code,response_body,expires_at)
+ values(p_org,k,'automation-tag',fingerprint,200,result,now()+interval '365 days');
+ return result;
+end $$;
+revoke all on function public.fn_automation_add_tag(uuid,uuid,uuid,integer,jsonb) from public,anon,authenticated,service_role;
+grant execute on function public.fn_automation_add_tag(uuid,uuid,uuid,integer,jsonb) to service_role;
+
+create or replace function public.fn_automation_tag_receipt_guard() returns trigger language plpgsql set search_path=public as $$
+declare scoped boolean;
+begin
+ scoped:=case when TG_OP='DELETE' then old.endpoint='automation-tag' when TG_OP='INSERT' then new.endpoint='automation-tag' else old.endpoint='automation-tag' or new.endpoint='automation-tag' end;
+ if scoped and current_user not in('postgres','supabase_admin') then
+  if TG_OP='DELETE' and not exists(select 1 from public.organizations where id=old.organization_id) then return old; end if;
+  raise exception 'automation_tag_receipt_private' using errcode='42501';
+ end if;
+ if TG_OP='DELETE' then return old; end if; return new;
+end $$;
+revoke all on function public.fn_automation_tag_receipt_guard() from public,anon,authenticated,service_role;
+drop trigger if exists automation_tag_receipt_guard on public.idempotency_keys;
+create trigger automation_tag_receipt_guard before insert or update or delete on public.idempotency_keys for each row execute function public.fn_automation_tag_receipt_guard();
+
+-- ---- continuidade humana e regras (migration 0270) ----
+-- Conserva coleta quando a conversa passa ao humano por qualquer porta existente.
+create or replace function public.fn_script_on_human_control() returns trigger language plpgsql security definer set search_path=public as $$
+begin
+ if (new.bot_silenced_until='infinity'::timestamptz and old.bot_silenced_until is distinct from new.bot_silenced_until)
+ or (new.status='closed' and old.status is distinct from new.status) then
+  with changed as (
+   update public.crm_script_sessions set status='interrupted',interruption_reason='Atendimento assumido por humano ou encerrado',revision=revision+1,updated_at=now()
+   where organization_id=new.organization_id and conversation_id=new.id and status='running' returning id
+  ) insert into public.api_audit_log(organization_id,action,resource_type,resource_id,metadata)
+  select new.organization_id,'short_script.human_control','short_script',id,'{}' from changed;
+ end if;
+ return new;
+end $$;
+revoke all on function public.fn_script_on_human_control() from public,anon,authenticated,service_role;
+drop trigger if exists script_on_human_control on public.conversations;
+create trigger script_on_human_control after update of bot_silenced_until,status on public.conversations for each row execute function public.fn_script_on_human_control();
+
+-- Referência UUID em JSON também deve pertencer à organização; alias textual fica.
+create or replace function public.fn_automation_rule_tag_guard() returns trigger language plpgsql security definer set search_path=public as $$
+declare action jsonb; tag text;
+begin
+ if auth.uid() is not null and (not public.fn_role_at_least(new.organization_id,'manager') or not public.fn_support_write_allowed(new.organization_id) or not public.fn_session_mfa_proven()) then raise exception 'automation_management_forbidden' using errcode='42501'; end if;
+ for action in select value from jsonb_array_elements(new.actions) loop
+  if action->>'type'='add_tag' and action->'config' ? 'tag_ids' then
+   if jsonb_typeof(action->'config'->'tag_ids') is distinct from 'array' or jsonb_array_length(action->'config'->'tag_ids') not between 1 and 10 then raise exception 'automation_tags_invalid' using errcode='22023'; end if;
+   for tag in select value from jsonb_array_elements_text(action->'config'->'tag_ids') loop
+    if not exists(select 1 from public.crm_tags where id=tag::uuid and organization_id=new.organization_id and (not is_archived or merged_into is not null)) then raise exception 'automation_tag_cross_org' using errcode='23503'; end if;
+   end loop;
+  end if;
+ end loop;
+ return new;
+end $$;
+revoke all on function public.fn_automation_rule_tag_guard() from public,anon,authenticated,service_role;
+drop trigger if exists automation_rule_tag_guard on public.automation_rules;
+create trigger automation_rule_tag_guard before insert or update on public.automation_rules for each row execute function public.fn_automation_rule_tag_guard();
+
+-- TTL não pode apagar a identidade de um efeito ainda referenciado pelo evento.
+update public.idempotency_keys set expires_at='infinity' where endpoint='automation-tag';
+
+-- ---- referências e retenção de tags (migration 0271) ----
+-- Ação relacional atômica no motor existente; não é scheduler/engine novo.
+create or replace function public.fn_automation_add_tag(p_org uuid,p_rule uuid,p_event uuid,p_index integer,p_origin jsonb default null) returns jsonb
+language plpgsql security definer set search_path=public as $$
+declare r public.automation_rules; e public.event_log; a jsonb; cfg jsonb; chosen uuid; raw text;
+ target uuid; kind text; before_tags text[]; after_tags text[]; tag_ids uuid[]:='{}';
+ receipt public.idempotency_keys; fingerprint bytea; result jsonb; k text;
+begin
+ select * into r from public.automation_rules where id=p_rule and organization_id=p_org;
+ select * into e from public.event_log where id=p_event and organization_id=p_org;
+ if r.id is null or e.id is null or not r.is_active or r.trigger_event<>e.event_type or p_index<0 then raise exception 'automation_context_invalid' using errcode='23503'; end if;
+ a:=r.actions->p_index; cfg:=a->'config';
+ if a->>'type' is distinct from 'add_tag' then raise exception 'automation_action_invalid' using errcode='22023'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('crm-tags:'||p_org::text,0));
+ k:=p_event::text||':'||p_rule::text||':'||p_index::text; fingerprint:=extensions.digest(a::text,'sha256');
+ select * into receipt from public.idempotency_keys where organization_id=p_org and endpoint='automation-tag' and key=k;
+ if found then
+  if receipt.request_hash is distinct from fingerprint then raise exception 'automation_action_changed' using errcode='23505'; end if;
+  return receipt.response_body||jsonb_build_object('replayed',true);
+ end if;
+ if e.entity_kind='crm_lead' then
+  select id,tags into target,before_tags from public.crm_leads where id=e.entity_id and organization_id=p_org for update; kind:='lead';
+ elsif e.entity_kind='contact' then
+  select id,tags into target,before_tags from public.contacts where id=e.entity_id and organization_id=p_org for update; kind:='contact';
+ elsif e.entity_kind='message' then
+  select c.id,c.tags into target,before_tags from public.messages m join public.conversations v on v.id=m.conversation_id and v.organization_id=m.organization_id join public.contacts c on c.id=v.contact_id and c.organization_id=v.organization_id where m.id=e.entity_id and m.organization_id=p_org for update of c; kind:='contact';
+ end if;
+ if target is null then return jsonb_build_object('added','[]'::jsonb,'skipped',true); end if;
+ if cfg ? 'tag_ids' then
+  if jsonb_typeof(cfg->'tag_ids') is distinct from 'array' or jsonb_array_length(cfg->'tag_ids') not between 1 and 10 then raise exception 'automation_tags_invalid' using errcode='22023'; end if;
+  for raw in select value from jsonb_array_elements_text(cfg->'tag_ids') loop
+   select coalesce(merged_into,id) into chosen from public.crm_tags where organization_id=p_org and id=raw::uuid;
+   if chosen is null or not exists(select 1 from public.crm_tags where id=chosen and organization_id=p_org and not is_archived and merged_into is null) then raise exception 'automation_tag_unavailable' using errcode='23503'; end if;
+   tag_ids:=array_append(tag_ids,chosen);
+  end loop;
+ else
+  if jsonb_typeof(cfg->'tags') is distinct from 'array' or jsonb_array_length(cfg->'tags') not between 1 and 10 then raise exception 'automation_tags_invalid' using errcode='22023'; end if;
+  for raw in select value from jsonb_array_elements_text(cfg->'tags') loop
+   chosen:=public.fn_crm_tag_ensure_legacy(p_org,raw,true); tag_ids:=array_append(tag_ids,chosen);
+  end loop;
+ end if;
+ insert into public.crm_tag_assignments(organization_id,tag_id,entity_kind,entity_id)
+ select p_org,tag,kind,target from(select distinct unnest(tag_ids) tag) t on conflict do nothing;
+ if kind='lead' then select tags into after_tags from public.crm_leads where id=target and organization_id=p_org;
+ else select tags into after_tags from public.contacts where id=target and organization_id=p_org; end if;
+ result:=jsonb_build_object('added',coalesce((select jsonb_agg(t) from unnest(after_tags) t where not t=any(coalesce(before_tags,'{}'))),'[]'::jsonb));
+ if result->'added'<>'[]'::jsonb then
+  perform public.emit_event(case when kind='lead' then 'lead.tag_added' else 'contact.tag_added' end,case when kind='lead' then 'crm_lead' else 'contact' end,target,
+   jsonb_build_object('added_tags',result->'added','tags',after_tags,'tag_ids',tag_ids,'service_origin',p_origin),jsonb_build_object('caused_by_rule',p_rule),p_org);
+ end if;
+ insert into public.idempotency_keys(organization_id,key,endpoint,request_hash,status_code,response_body,expires_at)
+ values(p_org,k,'automation-tag',fingerprint,200,result,'infinity'::timestamptz);
+ return result;
+end $$;
+revoke all on function public.fn_automation_add_tag(uuid,uuid,uuid,integer,jsonb) from public,anon,authenticated,service_role;
+grant execute on function public.fn_automation_add_tag(uuid,uuid,uuid,integer,jsonb) to service_role;
+
+
+create or replace function public.fn_crm_tag_impact(p_org uuid,p_tag uuid)
+returns jsonb language plpgsql stable security definer set search_path=public as $$
+declare uses bigint; configs bigint;
+begin
+ if not(p_org in(select public.fn_user_org_ids())) and coalesce(auth.jwt()->>'role','')<>'service_role' then raise exception 'tag_forbidden' using errcode='42501'; end if;
+ if not exists(select 1 from public.crm_tags where id=p_tag and organization_id=p_org) then raise exception 'tag_not_found' using errcode='22023'; end if;
+ select count(*) into uses from public.crm_tag_assignments where organization_id=p_org and tag_id=p_tag;
+ select count(*) into configs from (
+  select settings config from public.organizations where id=p_org
+  union all select settings from public.crm_pipelines where organization_id=p_org
+  union all select conditions||actions from public.automation_rules where organization_id=p_org
+  union all select coalesce(draft_graph,'{}'::jsonb)||coalesce(trigger_config,'{}'::jsonb) from public.followup_flow_pointers where organization_id=p_org
+  union all select graph from public.followup_flow_versions where organization_id=p_org
+ ) c where exists(select 1 from public.crm_tag_aliases a where a.organization_id=p_org and a.tag_id=p_tag
+  and (position(to_jsonb(a.alias_name)::text in c.config::text)>0 or position(to_jsonb(a.normalized_name)::text in c.config::text)>0))
+ or exists(select 1 from public.crm_tags t where t.organization_id=p_org and (t.id=p_tag or t.merged_into=p_tag) and position(to_jsonb(t.id::text)::text in c.config::text)>0);
+ return jsonb_build_object('assignments',uses,'configuration_references',configs);
+end $$;
+revoke all on function public.fn_crm_tag_impact(uuid,uuid) from public,anon,authenticated,service_role;
+grant execute on function public.fn_crm_tag_impact(uuid,uuid) to authenticated,service_role;
+
+-- ---- replay autorizado e remoção (migration 0272) ----
+-- Revalida escopo/role no replay e protege remoção direta de regras com MFA.
+create or replace function public.fn_script_command(p_org uuid,p_command jsonb,p_request uuid) returns jsonb
+language plpgsql security definer set search_path=public as $
+declare a text:=p_command->>'action'; d jsonb:=p_command->'definition'; chosen uuid;
+ s public.crm_short_scripts; v public.crm_script_sessions; c public.conversations;
+ step jsonb; answer jsonb; result jsonb; receipt public.idempotency_keys; fingerprint bytea;
+begin
+ if auth.uid() is null or not public.fn_role_at_least(p_org,'agent') or not public.fn_support_write_allowed(p_org)
+ or not public.fn_session_mfa_proven() or not public.fn_capability_enabled(p_org,'short_scripts') then raise exception 'script_forbidden' using errcode='42501'; end if;
+ if p_request is null or a is null or a not in('create','update','start','answer','interrupt','resume') then raise exception 'script_invalid' using errcode='22023'; end if;
+ if a in('create','update') and not public.fn_role_at_least(p_org,'manager') then raise exception 'script_manager_required' using errcode='42501'; end if;
+ perform pg_advisory_xact_lock(hashtextextended('short-scripts:'||p_org::text,0));
+ fingerprint:=extensions.digest(p_command::text,'sha256');
+ select * into receipt from public.idempotency_keys where organization_id=p_org and key=p_request::text and endpoint='short-script:'||auth.uid()::text;
+ if found then
+  if receipt.request_hash is distinct from fingerprint then raise exception 'script_request_conflict' using errcode='23505'; end if;
+  if a not in('create','update') then
+   select * into c from public.conversations where id=(receipt.response_body->>'conversation_id')::uuid and organization_id=p_org;
+   if c.id is null or not public.fn_can_view_conversation(p_org,c.assigned_to_user_id) then raise exception 'script_replay_scope_forbidden' using errcode='42501'; end if;
+  end if;
+  return receipt.response_body;
+ end if;
+ if a in('create','update') then
+  if not public.fn_role_at_least(p_org,'manager') then raise exception 'script_manager_required' using errcode='42501'; end if;
+  if not public.fn_script_definition_valid(d) then raise exception 'script_definition_invalid' using errcode='22023'; end if;
+  if a='create' then
+   insert into public.crm_short_scripts(organization_id,definition) values(p_org,d) returning * into s;
+  else
+   select * into s from public.crm_short_scripts where id=(p_command->>'id')::uuid and organization_id=p_org for update;
+   if not found then raise exception 'script_unavailable' using errcode='23503'; end if;
+   if s.revision is distinct from (p_command->>'expected_revision')::integer then raise exception 'script_version_conflict' using errcode='23505'; end if;
+   update public.crm_short_scripts set definition=d,revision=revision+1,updated_at=now() where id=s.id and organization_id=p_org returning * into s;
+  end if;
+  result:=to_jsonb(s); chosen:=s.id;
+ else
+  if a='start' then
+   select * into s from public.crm_short_scripts where id=(p_command->>'script_id')::uuid and organization_id=p_org;
+   if not found or s.definition->'is_active' is distinct from 'true'::jsonb then raise exception 'script_disabled' using errcode='23503'; end if;
+   select * into c from public.conversations where id=(p_command->>'conversation_id')::uuid and organization_id=p_org;
+  else
+   select * into v from public.crm_script_sessions where id=(p_command->>'id')::uuid and organization_id=p_org for update;
+   if not found then raise exception 'script_session_unavailable' using errcode='23503'; end if;
+   select * into c from public.conversations where id=v.conversation_id and organization_id=p_org;
+   if v.revision is distinct from (p_command->>'expected_revision')::integer then raise exception 'script_version_conflict' using errcode='23505'; end if;
+  end if;
+  if c.id is null or not public.fn_can_view_conversation(p_org,c.assigned_to_user_id) then raise exception 'script_conversation_forbidden' using errcode='42501'; end if;
+  if a='start' then
+   insert into public.crm_script_sessions(organization_id,script_id,conversation_id,snapshot) values(p_org,s.id,c.id,s.definition) returning * into v;
+  elsif a='answer' then
+   if v.status<>'running' then raise exception 'script_not_running' using errcode='23505'; end if;
+   step:=v.snapshot->'steps'->v.current_step; answer:=p_command->'answer';
+   if step->>'id' is distinct from p_command->>'step_id' then raise exception 'script_step_conflict' using errcode='23505'; end if;
+   if step->>'type'='confirmation' then
+    if jsonb_typeof(answer) is distinct from 'boolean' then raise exception 'script_answer_invalid' using errcode='22023'; end if;
+   else
+    if jsonb_typeof(answer) is distinct from 'string' or length(btrim(answer#>>'{}')) not between 1 and 2000 then raise exception 'script_answer_invalid' using errcode='22023'; end if;
+    if step->>'type'='choice' and not (step->'options' @> jsonb_build_array(answer)) then raise exception 'script_choice_invalid' using errcode='22023'; end if;
+   end if;
+   update public.crm_script_sessions set answers=answers||jsonb_build_object(step->>'id',answer),current_step=current_step+1,
+    status=case when current_step+1=jsonb_array_length(snapshot->'steps') then 'completed' else 'running' end,
+    revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+  elsif a='interrupt' then
+   if v.status<>'running' or length(btrim(coalesce(p_command->>'reason',''))) not between 1 and 300 then raise exception 'script_interrupt_invalid' using errcode='22023'; end if;
+   update public.crm_script_sessions set status='interrupted',interruption_reason=p_command->>'reason',revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+   -- Coleta interrompida entrega contexto pela mesma conversa; não reativa IA.
+   update public.conversations set status=case when status='ai_handling' then 'pending' else status end,bot_silenced_until='infinity',last_handoff_at=now(),last_handoff_reason='Roteiro interrompido: contexto disponível no atendimento' where id=c.id and organization_id=p_org;
+  elsif a='resume' then
+   if v.status<>'interrupted' then raise exception 'script_resume_invalid' using errcode='23505'; end if;
+   update public.crm_script_sessions set status='running',revision=revision+1,updated_at=now() where id=v.id and organization_id=p_org returning * into v;
+  end if;
+  result:=to_jsonb(v); chosen:=v.id;
+ end if;
+ insert into public.api_audit_log(organization_id,actor_user_id,action,resource_type,resource_id,metadata)
+ values(p_org,auth.uid(),'short_script.'||a,'short_script',chosen,jsonb_build_object('status',result->>'status'));
+ insert into public.idempotency_keys(organization_id,key,endpoint,request_hash,status_code,response_body,expires_at)
+ values(p_org,p_request::text,'short-script:'||auth.uid()::text,fingerprint,200,result,now()+interval '24 hours');
+ return result;
+end $;
+revoke all on function public.fn_script_command(uuid,jsonb,uuid) from public,anon,authenticated,service_role;
+grant execute on function public.fn_script_command(uuid,jsonb,uuid) to authenticated;
+
+
+create or replace function public.fn_automation_rule_delete_guard() returns trigger language plpgsql security definer set search_path=public as $
+begin
+ if auth.uid() is not null and (not public.fn_role_at_least(old.organization_id,'manager') or not public.fn_support_write_allowed(old.organization_id) or not public.fn_session_mfa_proven()) then raise exception 'automation_delete_forbidden' using errcode='42501'; end if;
+ return old;
+end $;
+revoke all on function public.fn_automation_rule_delete_guard() from public,anon,authenticated,service_role;
+drop trigger if exists automation_rule_delete_guard on public.automation_rules;
+create trigger automation_rule_delete_guard before delete on public.automation_rules for each row execute function public.fn_automation_rule_delete_guard();
+
+-- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
+--
+-- ⚠️ ESTE BLOCO É, DE PROPÓSITO, O ÚLTIMO DO ARQUIVO. Apêndice novo entra ANTES
+
+-- dele — quem o empurrar para o meio desarma a cura para tudo que vier depois.
+-- Vigiado por `tests/unit/varredura-anon-e-o-ultimo-bloco.test.ts`.
+--
+-- A 0108 revogou anon numa LISTA de 8 funções, medida num banco instalado do
+-- ZERO. Quem ATUALIZA tem outro estado: o `ALTER DEFAULT PRIVILEGES ... GRANT
+-- ALL ON FUNCTIONS TO anon` do corpo deste arquivo grava uma entrada em
+-- `pg_default_acl` que fica no catálogo PARA SEMPRE, e a partir daí toda função
+-- criada em `public` nasce com EXECUTE para anon — inclusive as deste apêndice.
+--
+-- Medido numa VPS real (2026-08-07), comparando com o que um install fresco
+-- produz: 6 definer expostas a anon e 5 a authenticated, entre elas
+-- `fn_decrypt_oauth` — alcançável pela anon key, que vai para o browser.
+--
+-- Lista conserta o estoque e reabre no próximo `create function`. Esta varredura
+-- é auto-curativa e roda DEPOIS de tudo que cria função, então cura no mesmo run
+-- em que o defeito nasceria. Desfazer o ALTER DEFAULT PRIVILEGES não serve: ele
+-- vem do `pg_dump` do Supabase e é reescrito a cada re-aplicação.
+--
+-- As duas origens de EXECUTE (a mesma lição da 0108): grant DIRETO a anon, que
+-- `revoke from public` não remove; e grant a PUBLIC, do qual anon HERDA, que
+-- `revoke from anon` não remove. O privilégio EFETIVO de authenticated e
+-- service_role é medido ANTES e devolvido depois — tira anon sem tirar leitura.
+do $$
+declare
+  f record;
+  tinha_auth boolean;
+  tinha_service boolean;
+begin
+  if to_regrole('anon') is null then
+    return;
+  end if;
+
+  for f in
+    select p.oid, p.oid::regprocedure as assinatura
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.prosecdef
+  loop
+    tinha_auth := to_regrole('authenticated') is not null
+                  and has_function_privilege('authenticated', f.oid, 'EXECUTE');
+    tinha_service := to_regrole('service_role') is not null
+                     and has_function_privilege('service_role', f.oid, 'EXECUTE');
+
+    execute format('revoke execute on function %s from public, anon', f.assinatura);
+
+    if tinha_auth then
+      execute format('grant execute on function %s to authenticated', f.assinatura);
+    end if;
+    if tinha_service then
+      execute format('grant execute on function %s to service_role', f.assinatura);
+    end if;
+  end loop;
+end $$;
 
 -- cabe varredura — `authenticated` PRECISA de EXECUTE nos helpers de RLS e em
 -- `retrieve_top_k_chunks` (num install fresco ele tem). É julgamento por função,
