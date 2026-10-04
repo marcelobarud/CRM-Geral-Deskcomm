@@ -160,6 +160,10 @@ export async function verifyScheduledCampaigns({
   insist(viewerApi.status() === 403, "H API viewer negada");
   await mobile.page.screenshot({ path: `${dir}/campaigns-viewer-390.png`, fullPage: true });
   await page.context().clearCookies();
+  const optionsResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.origin === new URL(app).origin && url.pathname === "/api/v1/campaigns/options";
+  }, { timeout: 120000 });
   await page.goto(`${app}/login?next=${encodeURIComponent("/app/campaigns")}`, { timeout: 120000 });
   await page.getByLabel("Email", { exact: true }).fill(a.email);
   await page.getByLabel("Senha", { exact: true }).fill(password);
@@ -174,11 +178,12 @@ export async function verifyScheduledCampaigns({
     await digits.nth(index).fill(digit);
   }
   await page.waitForURL("**/app/campaigns", { timeout: 120000 });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("heading", { name: "Campanhas agendadas", exact: true }).waitFor();
   await page.getByRole("button", { name: "Nova campanha", exact: true }).waitFor();
   await page.screenshot({ path: `${dir}/campaigns-ready-1440.png`, fullPage: true });
 
-  const optionsResponse = await context.request.get(`${app}/api/v1/campaigns/options`);
+  const optionsResponse = await optionsResponsePromise;
   insist(optionsResponse.ok(), "H API opções");
   const options = (await optionsResponse.json()).data;
   const { timezone } = options;
