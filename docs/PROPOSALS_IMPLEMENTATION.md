@@ -94,3 +94,11 @@ P2: suíte global/i18n históricos sem verde; não corrigidos fora do escopo.
 P3: busca de contexto/modelos limitada a 100; paginação de propostas usa offset e filtro de contato resolve oportunidades em query auxiliar. Evoluir quando volume exigir; sem infraestrutura antecipada.
 
 Próximo passo imediato é executar e revisar a suíte Proposals. Não iniciar Bloco G nem publicar/mesclar F neste checkpoint.
+
+## Primeira tentativa real e correção do harness
+
+Execução f78ab7d5-0262-4c13-854e-69acbf32f82b: base D2 passou; Proposals interrompida antes de criar proposta. O harness tentou INSERT direto em crm_companies, mas o contrato B2B revoga essa escrita de service_role e exige fn_crm_company_manage autenticada. Criação e edição agora usam a RPC com JWT A, consumindo o retorno company_id. Nenhum grant, RLS ou código funcional foi relaxado.
+
+O relatório havia mostrado a etapa de inventário da limpeza em vez da operação original; o diagnóstico sanitizado agora acompanha o erro até o catch principal, preservado durante cleanup. Teste de regressão passou; seis testes em dois arquivos passaram. Probe transacional Geral 1 confirmou criação/edição da empresa pela RPC e o contrato company_id, além dos checks anteriores de propostas.
+
+Verificação independente da tentativa: zero organizações das fixtures, zero dos quatro usuários e zero objetos proposal-documents nos dois prefixos desta execução. Homologação Proposals continua pendente; executar novamente a mesma suíte. Sem push/merge do Bloco F e sem início de G.

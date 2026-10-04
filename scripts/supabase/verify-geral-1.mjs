@@ -64,13 +64,13 @@ function requireResult(result, label) {
         : message.includes("not allowed") || message.includes("not authorized")
           ? "not_authorized"
           : "unclassified";
-    throw new Error(label);
+    throw Object.assign(new Error(label), { verificationFailure: { check: lastCheck, code: failureCode, reason: failureReason } });
   }
   return result.data;
 }
 function insist(value, label) {
   lastCheck = label;
-  if (!value) throw new Error(label);
+  if (!value) throw Object.assign(new Error(label), { verificationFailure: { check: label, code: null, reason: null } });
 }
 function done(label) {
   checks.push(label);
@@ -615,7 +615,7 @@ try {
   }
   if (proposalsSuite) {
     phase = "proposals-journey";
-    await verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult,insist,done});
+    await verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult,insist,done,getDiagnostic:()=>({check:lastCheck,code:failureCode,reason:failureReason})});
   }
   if (forecastSuite) {
     phase = "forecast-journey";
@@ -693,6 +693,11 @@ try {
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
 } catch (error) {
+  if (error?.verificationFailure) {
+    lastCheck = error.verificationFailure.check;
+    failureCode = error.verificationFailure.code;
+    failureReason = error.verificationFailure.reason;
+  }
   if (!failureReason && error?.name === "TimeoutError") failureReason = "browser_timeout";
   process.stderr.write(`D2 interrompida na etapa: ${phase}. Nenhuma credencial foi registrada.\n`);
   process.exitCode = 1;

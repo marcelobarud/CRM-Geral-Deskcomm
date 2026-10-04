@@ -1,6 +1,6 @@
 import {expect} from '@playwright/test';
 import {randomUUID,createHash} from 'node:crypto';
-export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult:take,insist,done}){
+export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,desktop,mobile,app,dir,requireResult:take,insist,done,getDiagnostic}){
  const {page,context}=desktop;const paths=[];let proposal;
  const draft={title:'Proposta fictícia F',currency:'BRL',notes:'Texto fictício original',items:[{description:'Serviço fictício',quantity:'2',unit_price_cents:'10000'}]};
  const shot=async name=>{insist(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'F sem overflow '+name);await page.screenshot({path:dir+'/proposals-'+name+'.png',fullPage:true});};
@@ -15,8 +15,8 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  await expect(toggle).toBeChecked();
  // Aquece endpoints dev e comprova que o app atende com sessão real antes da tela.
  for(const route of ['/api/v1/proposals','/api/v1/proposal-templates','/api/v1/proposals/options'])insist((await context.request.get(app+route,{timeout:120000})).ok(),'F leitura app '+route);
- const company=take(await admin.from('crm_companies').insert({organization_id:orgA,name:'Empresa fictícia F'}).select('id').single(),'F empresa');
- const contact=take(await a.client.from('contacts').insert({organization_id:orgA,name:'Contato fictício F',email:'ficticio@example.invalid',phone_number:'5511999990000',company_id:company.id}).select('id').single(),'F contato');
+ const company=take(await a.client.rpc('fn_crm_company_manage',{p_org:orgA,p_action:'create',p_data:{name:'Empresa fictícia F'}}),'F empresa');
+ const contact=take(await a.client.from('contacts').insert({organization_id:orgA,name:'Contato fictício F',email:'ficticio@example.invalid',phone_number:'5511999990000',company_id:company.company_id}).select('id').single(),'F contato');
  const pipe=take(await a.client.from('crm_pipelines').select('id').eq('organization_id',orgA).limit(1).single(),'F contexto funil');
  const stage=take(await a.client.from('crm_stages').select('id').eq('organization_id',orgA).eq('pipeline_id',pipe.id).eq('is_won',false).eq('is_lost',false).limit(1).single(),'F contexto etapa');
  const lead=take(await a.client.from('crm_leads').insert({organization_id:orgA,pipeline_id:pipe.id,stage_id:stage.id,title:'Oportunidade fictícia F',contact_id:contact.id,owner_user_id:a.id}).select('id').single(),'F oportunidade');
@@ -54,7 +54,7 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  insist((await admin.rpc('fn_proposal_command',{p_org:orgA,p_action:'create',p_data:draft,p_request:randomUUID()})).error?.code==='42501','F service sem atalho');
  insist((await a.client.from('idempotency_keys').update({response_body:{forged:true}}).eq('organization_id',orgA).eq('endpoint','proposal:create')).error?.code==='42501','F receipt não pode ser falsificado');
  const own=take(await rpc(agent,orgA,'create',null,draft),'F agent cria próprio');insist(take(await agent.client.from('crm_proposals').select('id').eq('organization_id',orgA),'F agent lê próprio').every(x=>x.id===own.id),'F own scope');
- take(await admin.from('crm_companies').update({name:'Empresa fictícia alterada'}).eq('organization_id',orgA).eq('id',company.id),'F contexto empresa alterado');
+ take(await a.client.rpc('fn_crm_company_manage',{p_org:orgA,p_action:'edit',p_company:company.company_id,p_data:{name:'Empresa fictícia alterada'}}),'F contexto empresa alterado');
  take(await admin.from('contacts').update({name:'Contato alterado',email:'alterado@example.invalid'}).eq('organization_id',orgA).eq('id',contact.id),'F contato alterado');
  take(await admin.from('catalog_products').update({preco_cents:90000}).eq('organization_id',orgA).eq('id',product.id),'F preço catálogo alterado');
  take(await admin.from('crm_proposal_templates').update({content:{notes:'Novo modelo',items:[{description:'Alterado',quantity:'1',unit_price_cents:'99999'}]}}).eq('organization_id',orgA).eq('id',template.id),'F modelo alterado');
@@ -70,7 +70,7 @@ export async function verifyProposals({admin,a,b,viewer,agent,anon,orgA,orgB,des
  await page.goto(app+'/app/proposals',{timeout:120000});await page.getByText('Histórico preservado. Novas ações estão bloqueadas.',{exact:true}).waitFor();insist(await page.getByRole('button',{name:'Nova proposta',exact:true}).count()===0,'F criação ausente');await shot('disabled-1440');await page.setViewportSize({width:390,height:844});await shot('disabled-390');
  await mobile.page.goto(app+'/app/proposals',{timeout:120000});await mobile.page.getByText('Sem permissão para propostas.',{exact:true}).waitFor();insist((await mobile.context.request.get(app+'/api/v1/proposals')).status()===403,'F viewer API');
  done('Bloco F: capability default/desligamento, templates/itens, UI desktop/mobile/teclado, versões v1/v2 e PDF privado imutável, JWT/RLS A/B/viewer/agent/anon, histórico preservado');
- }catch(error){await page.screenshot({path:dir+'/proposals-failure.png',fullPage:true}).catch(()=>{});throw error;}
+ }catch(error){error.verificationFailure??=getDiagnostic();await page.screenshot({path:dir+'/proposals-failure.png',fullPage:true}).catch(()=>{});throw error;}
  finally{
  // Somente caminhos desta execução; nenhum segredo ou URL signed é persistido.
  const listed=take(await admin.from('crm_proposal_versions').select('pdf_path').eq('organization_id',orgA),'F inventário cleanup PDF');

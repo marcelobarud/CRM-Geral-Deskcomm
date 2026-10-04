@@ -1,11 +1,15 @@
 begin;
-do $probe$ declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); p jsonb; v jsonb; r jsonb; request uuid:=gen_random_uuid(); contact uuid:=gen_random_uuid(); linked jsonb; begin
+do $probe$ declare a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); actor uuid:=gen_random_uuid(); p jsonb; v jsonb; r jsonb; request uuid:=gen_random_uuid(); contact uuid:=gen_random_uuid(); linked jsonb; company jsonb; begin
  insert into public.organizations(id,slug,legal_name,display_name) values(a,'proposal-probe-'||a,'Fictícia A','Fictícia A'),(b,'proposal-probe-'||b,'Fictícia B','Fictícia B');
  insert into auth.users(id,email,raw_user_meta_data) values(actor,'proposal-probe-'||actor||'@example.invalid','{}');
  insert into public.user_organizations(user_id,organization_id,role,accepted_at) values(actor,a,'admin',now());
  perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true);
  if public.fn_capability_enabled(a,'proposals') then raise exception 'default_enabled'; end if;
  perform public.fn_set_capability(a,'proposals',true);
+ company:=public.fn_crm_company_manage(a,'create',null,'{"name":"Empresa fictícia probe"}');
+ if company->>'company_id' is null then raise exception 'company_contract_missing'; end if;
+ perform public.fn_crm_company_manage(a,'edit',(company->>'company_id')::uuid,'{"name":"Empresa fictícia editada"}');
+ if not exists(select 1 from public.crm_companies where organization_id=a and id=(company->>'company_id')::uuid and name='Empresa fictícia editada') then raise exception 'company_edit_missing'; end if;
  p:=public.fn_proposal_command(a,'create',null,'{"title":"Proposta fictícia","currency":"BRL","items":[{"description":"Meio centavo","quantity":"0.5","unit_price_cents":"1"},{"description":"Serviço","quantity":"2","unit_price_cents":"10000"}]}',request);
  if p->>'total_cents'<>'20001' then raise exception 'math'; end if;
  r:=public.fn_proposal_command(a,'create',null,'{"title":"Proposta fictícia","currency":"BRL","items":[{"description":"Meio centavo","quantity":"0.5","unit_price_cents":"1"},{"description":"Serviço","quantity":"2","unit_price_cents":"10000"}]}',request);
