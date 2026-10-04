@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   let query = db
     .from("crm_proposals")
     .select(
-      "*,crm_proposal_items(unit_price_cents,quantity),crm_proposal_versions(version_number,state),crm_leads(title,contacts(name,company_id,crm_companies(name))),contacts(name,company_id,crm_companies(name))",
+      "*,crm_proposal_items(description,unit_price_cents,quantity),crm_proposal_versions(version_number,state),crm_leads(title,contacts(name,company_id,crm_companies(name))),contacts(name,company_id,crm_companies(name))",
     )
     .eq("organization_id", auth.org.orgId)
     .order("updated_at", { ascending: false })

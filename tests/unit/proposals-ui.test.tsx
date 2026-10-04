@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-const state = vi.hoisted(() => ({ role: "admin", enabled: false }));
+const state = vi.hoisted(() => ({ role: "admin", enabled: false, populated: false }));
 vi.mock("@/hooks/auth/AuthProvider", () => ({
   useAuth: () => ({ activeOrg: { orgId: "org-fictícia", role: state.role } }),
 }));
@@ -15,7 +15,7 @@ vi.mock("@/lib/api/client", () => ({
     get: async (path: string) =>
       path.endsWith("/options")
         ? { data: { leads: [], contacts: [], products: [] } }
-        : { data: [], meta: { has_more: false } },
+        : { data: state.populated && path.startsWith('/api/v1/proposals?') ? [{id:'fictícia',title:'Proposta salva',currency:'BRL',status:'draft',updated_at:'2026-10-03T12:00:00Z',crm_proposal_items:[{description:'Serviço fictício',quantity:2,unit_price_cents:10000}],crm_proposal_versions:[]}] : [], meta: { has_more: false } },
   },
 }));
 import { ProposalsWorkspace } from "@/components/proposals/ProposalsWorkspace";
@@ -31,6 +31,13 @@ describe("propostas UI", () => {
   beforeEach(() => {
     state.role = "admin";
     state.enabled = false;
+    state.populated = false;
+  });
+  it("lista preenchida renderiza a proposta e o total dos itens", async () => {
+    state.populated = true;
+    mount();
+    expect(await screen.findByRole('button',{name:'Proposta salva'})).toBeInTheDocument();
+    expect(screen.getByText(/200,00/)).toBeInTheDocument();
   });
   it("viewer recebe permissão explícita", () => {
     state.role = "viewer";
