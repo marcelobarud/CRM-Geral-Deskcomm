@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Automações e roteiros curtos do CRM Geral",
+    "subtitle": "Motor existente e coleta humana limitada",
+    "output": "automacoes-roteiros.html",
+    "quality_profile": "standard"
+  },
+  "lanes": [
+    {
+      "id": "app",
+      "label": "Aplicativo"
+    },
+    {
+      "id": "db",
+      "label": "Banco"
+    },
+    {
+      "id": "humano",
+      "label": "Pessoa"
+    }
+  ],
+  "mainPath": ["event", "engine", "tag", "receipt", "activity"],
+  "nodes": [
+    {
+      "id": "event",
+      "lane": "db",
+      "label": "event_log: produtores existentes"
+    },
+    {
+      "id": "engine",
+      "lane": "app",
+      "label": "Motor existente: condição e registro por ação"
+    },
+    {
+      "id": "tag",
+      "lane": "db",
+      "label": "fn_automation_add_tag: catálogo e projeção textual"
+    },
+    {
+      "id": "receipt",
+      "lane": "db",
+      "label": "Recibo atômico e deduplicação"
+    },
+    {
+      "id": "activity",
+      "lane": "humano",
+      "label": "Webhooks › Atividade: falhas e resultados"
+    },
+    {
+      "id": "editor",
+      "lane": "humano",
+      "label": "Roteiros: edição linear de até 12 perguntas"
+    },
+    {
+      "id": "command",
+      "lane": "app",
+      "label": "API scripts: JWT, capability, revisão e idempotência"
+    },
+    {
+      "id": "session",
+      "lane": "db",
+      "label": "Sessão: snapshot, respostas e passo"
+    },
+    {
+      "id": "inbox",
+      "lane": "humano",
+      "label": "Inbox: contexto e continuidade humana"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "event",
+      "to": "engine",
+      "label": "Consumidor e worker existentes"
+    },
+    {
+      "id": "e2",
+      "from": "engine",
+      "to": "tag",
+      "label": "Ação conhecida add_tag"
+    },
+    {
+      "id": "e3",
+      "from": "tag",
+      "to": "receipt",
+      "label": "Mesma transação"
+    },
+    {
+      "id": "e4",
+      "from": "receipt",
+      "to": "engine",
+      "label": "Replay retorna efeito confirmado"
+    },
+    {
+      "id": "e5",
+      "from": "engine",
+      "to": "activity",
+      "label": "automation_rule_runs"
+    },
+    {
+      "id": "e6",
+      "from": "editor",
+      "to": "command",
+      "label": "Gerente configura"
+    },
+    {
+      "id": "e7",
+      "from": "command",
+      "to": "session",
+      "label": "RPC autenticada sem promoção ao CRM"
+    },
+    {
+      "id": "e8",
+      "from": "session",
+      "to": "inbox",
+      "label": "Respostas preservadas"
+    },
+    {
+      "id": "e9",
+      "from": "inbox",
+      "to": "command",
+      "label": "Agente responde, interrompe e retoma"
+    },
+    {
+      "id": "e10",
+      "from": "session",
+      "to": "editor",
+      "label": "Histórico preserva definição original"
+    }
+  ]
+}
