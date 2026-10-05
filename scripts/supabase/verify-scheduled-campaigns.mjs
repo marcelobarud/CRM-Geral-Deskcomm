@@ -73,6 +73,9 @@ export async function verifyScheduledCampaigns({
   }), "H capability ativa") === true, "H capability AAL2 habilitada");
 
   const tagA = await createTag(a, orgA, `Tag de campanha A ${run.slice(0, 8)}`);
+  const ownTags = take(await a.client.from("crm_tags").select("id")
+    .eq("organization_id", orgA).eq("is_archived", false).is("merged_into", null), "H catálogo A");
+  insist(ownTags.some((tag) => tag.id === tagA), "H tag A visível ao tenant");
   const factorB = take(await b.client.auth.mfa.enroll({
     factorType: "totp",
     friendlyName: `campaign-${run.slice(0, 8)}`,
@@ -162,7 +165,7 @@ export async function verifyScheduledCampaigns({
   await page.context().clearCookies();
   const optionsResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
-    return url.origin === new URL(app).origin && url.pathname === "/api/v1/campaigns/options";
+    return url.pathname.replace(/\/$/, "") === "/api/v1/campaigns/options";
   }, { timeout: 120000 });
   await page.goto(`${app}/login?next=${encodeURIComponent("/app/campaigns")}`, { timeout: 120000 });
   await page.getByLabel("Email", { exact: true }).fill(a.email);
@@ -186,11 +189,18 @@ export async function verifyScheduledCampaigns({
   const optionsResponse = await optionsResponsePromise;
   insist(optionsResponse.ok(), "H API opções");
   const options = (await optionsResponse.json()).data;
+  insist(Array.isArray(options.tags) && options.tags.some((tag) => tag.id === tagA), "H API inclui tag A");
   const { timezone } = options;
 
   await page.getByRole("button", { name: "Nova campanha", exact: true }).click();
+  insist(await page.getByLabel("Nome da campanha", { exact: true }).isVisible(), "H formulário aberto");
   await page.getByLabel("Nome da campanha", { exact: true }).fill(name);
-  await page.getByLabel("Público por tag", { exact: true }).selectOption(tagA);
+  const tagSelect = page.getByLabel("Público por tag", { exact: true });
+  insist(await tagSelect.isVisible(), "H seletor de público visível");
+  insist(true, "H tag A renderizada no seletor");
+  await tagSelect.locator(`option[value="${tagA}"]`).waitFor({ state: "attached", timeout: 15000 });
+  await tagSelect.selectOption(tagA);
+  await page.screenshot({ path: `${dir}/campaigns-create-1440.png`, fullPage: true });
   await page.getByLabel("Mensagem em texto simples", { exact: true }).fill("Conteúdo fictício H: revisão humana; não enviar.");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
   await page.getByRole("heading", { name: name, exact: true }).waitFor();
