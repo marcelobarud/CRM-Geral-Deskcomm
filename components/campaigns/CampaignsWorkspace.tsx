@@ -176,11 +176,19 @@ export function CampaignsWorkspace() {
     setCreating(true);
   }
 
-  async function refresh() {
-    await Promise.all([
+  async function refresh(campaignId: string | null = selected) {
+    const invalidations = [
       queryClient.invalidateQueries({ queryKey: ["scheduled-campaigns", activeOrg?.orgId] }),
-      queryClient.invalidateQueries({ queryKey: ["scheduled-campaign", activeOrg?.orgId, selected] }),
-    ]);
+    ];
+    if (campaignId) {
+      invalidations.push(
+        queryClient.invalidateQueries({
+          queryKey: ["scheduled-campaign", activeOrg?.orgId, campaignId],
+          refetchType: "all",
+        }),
+      );
+    }
+    await Promise.all(invalidations);
   }
 
   async function act(run: () => Promise<void>) {
@@ -212,7 +220,7 @@ export function CampaignsWorkspace() {
         headers: { "Idempotency-Key": keyFor({ id, scheduleBody }) },
       });
       setCreating(false); setReviewing(false); setDraftId(null); draftRequestKey.current = null;
-      await refresh();
+      await refresh(id);
     });
   }
 
@@ -233,7 +241,7 @@ export function CampaignsWorkspace() {
       setCreating(false); setReviewing(false); setEditing(false); setDraftId(null);
       draftRequestKey.current = null;
       setSelected(id);
-      await refresh();
+      await refresh(id);
     });
   }
 
