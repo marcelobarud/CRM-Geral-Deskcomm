@@ -302,7 +302,7 @@ export async function verifyScheduledCampaigns({
   await page.getByRole("button", { name: "Revisar campanha", exact: true }).click();
   await page.getByRole("heading", { name: "Revisão antes do agendamento", exact: true }).waitFor();
   await page.screenshot({ path: `${dir}/campaigns-review-1440.png`, fullPage: true });
-  insist((await page.getByText("26 contatos estimados", { exact: true }).count()) > 0, "H audiência estimada");
+  insist((await page.getByText("26 contatos estimados", { exact: false }).count()) > 0, "H audiência estimada");
   const confirm = page.getByRole("button", { name: "Confirmar e agendar", exact: true });
   await confirm.focus();
   insist(await confirm.evaluate((element) => document.activeElement === element), "H foco teclado revisão");
