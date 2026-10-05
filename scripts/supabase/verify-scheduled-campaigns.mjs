@@ -326,8 +326,21 @@ export async function verifyScheduledCampaigns({
   const pageOne = (await detailFirst.json()).data;
   insist(pageOne.recipients.length === 25 && pageOne.recipients_meta.has_more, "H recipients paginados");
   const recipientNext = page.getByRole("button", { name: "Próxima", exact: true }).last();
+  const recipientPageTwoResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === `/api/v1/campaigns/${draftRow.id}` && url.searchParams.get("page") === "1" && response.request().method() === "GET";
+  }, { timeout: 30000 });
   await recipientNext.focus();
-  await recipientNext.press("Enter");
+  await Promise.all([recipientPageTwoResponsePromise, recipientNext.press("Enter")]);
+  const recipientPageTwoResponse = await recipientPageTwoResponsePromise;
+  const recipientPageTwo = (await recipientPageTwoResponse.json()).data;
+  reportDiagnostic("campaign_recipient_pagination", {
+    status: recipientPageTwoResponse.status(),
+    recipient_count: recipientPageTwo.recipients.length,
+    has_more: recipientPageTwo.recipients_meta.has_more,
+  });
+  insist(recipientPageTwoResponse.ok() && recipientPageTwo.recipients.length === 1 && !recipientPageTwo.recipients_meta.has_more, "H API página final de recipients");
+  await page.getByRole("list", { name: "Destinatários paginados" }).getByRole("listitem").last().waitFor({ state: "visible" });
   insist(await page.getByRole("list", { name: "Destinatários paginados" }).getByRole("listitem").count() === 1, "H página final de recipients");
 
   const session = take(await a.client.auth.getSession(), "H sessão AAL2").session;
