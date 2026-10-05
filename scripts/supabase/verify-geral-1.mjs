@@ -34,7 +34,8 @@ const run = randomUUID(),
   orgB = randomUUID(),
   users = [],
   clients = [],
-  checks = [];
+  checks = [],
+  diagnostics = {};
 const password = randomBytes(30).toString("base64url");
 let lastCheck = "preflight";
 let failureCode = null;
@@ -722,7 +723,7 @@ try {
   }
   if (campaignsSuite) {
     phase = "campaigns-journey";
-    await verifyScheduledCampaigns({ admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile, app, dir, run, password, mfaSecret: factor.totp.secret, totp, requireResult, insist, done });
+    await verifyScheduledCampaigns({ admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile, app, dir, run, password, mfaSecret: factor.totp.secret, totp, requireResult, insist, done, reportDiagnostic: (name, value) => { diagnostics[name] = value; } });
   }
   done("MFA real: AAL1 bloqueada e AAL2 permite RPC; logout e novo login");
   passed = true;
@@ -793,6 +794,7 @@ try {
         failure_code: failedCode ?? failureCode,
         failure_reason: failedReason ?? failureReason,
         checks,
+        ...(Object.keys(diagnostics).length ? { diagnostics } : {}),
         fixtures_cleaned: cleaned,
         fixtures_created: organizationsCreated || users.length > 0,
         ...(!cleaned ? { fixture_organizations: [orgA, orgB], fixture_users: users } : {}),

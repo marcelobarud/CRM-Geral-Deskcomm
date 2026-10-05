@@ -45,7 +45,7 @@ async function setSessionCookie(context, session, app) {
 
 export async function verifyScheduledCampaigns({
   admin, a, b, viewer, agent, anon, orgA, orgB, desktop, mobile,
-  app, dir, run, password, mfaSecret, totp, requireResult: take, insist, done,
+  app, dir, run, password, mfaSecret, totp, requireResult: take, insist, done, reportDiagnostic,
 }) {
   const { page, context } = desktop;
   const proof = { campaigns: [], recipients: 0 };
@@ -163,6 +163,17 @@ export async function verifyScheduledCampaigns({
   insist(viewerApi.status() === 403, "H API viewer negada");
   await mobile.page.screenshot({ path: `${dir}/campaigns-viewer-390.png`, fullPage: true });
   await page.context().clearCookies();
+  const optionsResponses = [];
+  page.on("response", (response) => {
+    try {
+      const url = new URL(response.url());
+      if (url.pathname.replace(/\/$/, "") === "/api/v1/campaigns/options") {
+        optionsResponses.push({ status: response.status(), ok: response.ok() });
+      }
+    } catch {
+      // Ignore malformed URLs; no request or response content is retained.
+    }
+  });
   const optionsResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return url.pathname.replace(/\/$/, "") === "/api/v1/campaigns/options";
@@ -190,6 +201,8 @@ export async function verifyScheduledCampaigns({
   insist(optionsResponse.ok(), "H API opções");
   const options = (await optionsResponse.json()).data;
   insist(Array.isArray(options.tags) && options.tags.some((tag) => tag.id === tagA), "H API inclui tag A");
+  const apiTagCount = options.tags.length;
+  const expectedTag = options.tags.find((tag) => tag.id === tagA);
   const { timezone } = options;
 
   await page.getByRole("button", { name: "Nova campanha", exact: true }).click();
@@ -199,13 +212,46 @@ export async function verifyScheduledCampaigns({
   await createForm.getByLabel("Nome da campanha", { exact: true }).fill(name);
   const tagSelect = createForm.locator("select");
   insist((await tagSelect.count()) === 1 && await tagSelect.isVisible(), "H seletor de público visível");
-  insist(true, "H tag A renderizada no seletor");
-  await tagSelect.locator(`option[value="${tagA}"]`).waitFor({ state: "attached", timeout: 15000 });
-  await tagSelect.selectOption(tagA);
-  await page.getByLabel("Mensagem em texto simples", { exact: true }).fill("Conteúdo fictício H: revisão humana; não enviar.");
+  const selectorState = await tagSelect.evaluate((select, tagId) => ({
+    option_count: select.options.length,
+    contains_expected_option: Array.from(select.options).some((option) => option.value === tagId),
+  }), tagA);
+  reportDiagnostic("campaign_options_ui", {
+    api_status: optionsResponse.status(),
+    api_tag_count: apiTagCount,
+    api_contains_expected_tag: true,
+    browser_options_responses: optionsResponses,
+    selector_option_count: selectorState.option_count,
+    selector_contains_expected_tag: selectorState.contains_expected_option,
+  });
+  insist(selectorState.contains_expected_option, "H tag A renderizada no seletor");
+  await tagSelect.selectOption({ label: expectedTag.name });
+  const selectedTag = await tagSelect.inputValue();
+  reportDiagnostic("campaign_form_selection", {
+    selected_value_present: selectedTag.length > 0,
+    selected_expected_tag: selectedTag === tagA,
+  });
+  insist(selectedTag === tagA, "H tag A selecionada pela interface");
+  const messageField = createForm.locator("textarea[required]");
+  insist((await messageField.count()) === 1 && await messageField.isVisible(), "H campo de mensagem visível");
+  await messageField.fill("Conteúdo fictício H: revisão humana; não enviar.");
+  insist(true, "H campo de mensagem preenchido");
+  const createResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname.replace(/\/$/, "") === "/api/v1/campaigns" && response.request().method() === "POST";
+  }, { timeout: 30000 });
+  insist(true, "H criação do rascunho enviada");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
-  await page.getByRole("heading", { name: name, exact: true }).waitFor();
-  await page.getByText("Rascunho", { exact: true }).waitFor();
+  const createResponse = await createResponsePromise;
+  reportDiagnostic("campaign_create_api", { status: createResponse.status(), ok: createResponse.ok() });
+  insist(createResponse.ok(), "H API cria rascunho");
+  await page.screenshot({ path: `${dir}/campaigns-created-1440.png`, fullPage: true });
+  insist(true, "H aguardando detalhe do rascunho");
+  await page.getByRole("heading", { name, exact: true, level: 3 }).waitFor({ timeout: 15000 });
+  insist(true, "H detalhe do rascunho visível");
+  insist(true, "H aguardando estado do rascunho");
+  await page.getByText("Rascunho", { exact: true }).waitFor({ timeout: 15000 });
+  insist(true, "H estado do rascunho visível");
   const draftRow = take(await a.client.from("crm_scheduled_campaigns").select("id")
     .eq("organization_id", orgA).eq("name", name).single(), "H draft id");
   proof.campaigns.push(draftRow.id);
@@ -224,7 +270,7 @@ export async function verifyScheduledCampaigns({
   await page.getByLabel("Nome da campanha", { exact: true }).fill(editedName);
   await page.getByLabel("Mensagem em texto simples", { exact: true }).fill("Conteúdo editado fictício H; não enviar.");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
-  await page.getByRole("heading", { name: editedName, exact: true }).waitFor();
+  await page.getByRole("heading", { name: editedName, exact: true, level: 3 }).waitFor();
   const editedRow = take(await a.client.from("crm_scheduled_campaigns").select("id,name,content")
     .eq("organization_id", orgA).eq("id", draftRow.id).single(), "H edição");
   insist(editedRow.name === editedName && editedRow.content === "Conteúdo editado fictício H; não enviar.", "H edição de rascunho aplicada");
@@ -238,7 +284,7 @@ export async function verifyScheduledCampaigns({
   await confirm.focus();
   insist(await confirm.evaluate((element) => document.activeElement === element), "H foco teclado revisão");
   await confirm.press("Enter");
-  await page.getByRole("heading", { name: editedName, exact: true }).waitFor();
+  await page.getByRole("heading", { name: editedName, exact: true, level: 3 }).waitFor();
   await page.getByText("Agendada", { exact: true }).waitFor();
   await page.screenshot({ path: `${dir}/campaigns-scheduled-1440.png`, fullPage: true });
 
@@ -267,7 +313,7 @@ export async function verifyScheduledCampaigns({
   await mobile.page.goto(`${app}/app/campaigns`, { timeout: 120000 });
   await mobile.page.getByRole("heading", { name: "Campanhas agendadas", exact: true }).waitFor();
   await mobile.page.getByRole("button", { name: new RegExp(editedName) }).click();
-  await mobile.page.getByRole("heading", { name: editedName, exact: true }).waitFor();
+  await mobile.page.getByRole("heading", { name: editedName, exact: true, level: 3 }).waitFor();
   insist(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "H sem overflow mobile");
   await mobile.page.screenshot({ path: `${dir}/campaigns-detail-390.png`, fullPage: true });
 
