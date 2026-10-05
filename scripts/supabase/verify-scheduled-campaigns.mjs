@@ -249,9 +249,20 @@ export async function verifyScheduledCampaigns({
   insist(true, "H aguardando detalhe do rascunho");
   await page.getByRole("heading", { name, exact: true, level: 3 }).waitFor({ timeout: 15000 });
   insist(true, "H detalhe do rascunho visível");
-  insist(true, "H aguardando estado do rascunho");
-  await page.getByText("Rascunho", { exact: true }).waitFor({ timeout: 15000 });
-  insist(true, "H estado do rascunho visível");
+  const draftUiState = await page.evaluate((campaignName) => {
+    const bodyText = document.body.innerText;
+    return {
+      contains_campaign_name: bodyText.includes(campaignName),
+      contains_draft_label: Array.from(document.querySelectorAll("body *")).some((element) =>
+        element.childElementCount === 0 && element.textContent?.trim() === "Rascunho",
+      ),
+      detail_loading: bodyText.includes("Carregando detalhes"),
+      detail_error: bodyText.includes("Não foi possível carregar os detalhes"),
+    };
+  }, name);
+  reportDiagnostic("campaign_draft_ui", draftUiState);
+  await page.screenshot({ path: `${dir}/campaigns-draft-1440.png`, fullPage: true });
+  insist(draftUiState.contains_draft_label, "H estado do rascunho visível");
   const draftRow = take(await a.client.from("crm_scheduled_campaigns").select("id")
     .eq("organization_id", orgA).eq("name", name).single(), "H draft id");
   proof.campaigns.push(draftRow.id);
@@ -267,9 +278,21 @@ export async function verifyScheduledCampaigns({
   await page.screenshot({ path: `${dir}/campaigns-draft-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Editar rascunho", exact: true }).click();
   const editedName = `${name} editada`;
-  await page.getByLabel("Nome da campanha", { exact: true }).fill(editedName);
-  await page.getByLabel("Mensagem em texto simples", { exact: true }).fill("Conteúdo editado fictício H; não enviar.");
+  const editForm = page.locator('form[aria-label="Editar rascunho"]');
+  insist(await editForm.isVisible(), "H formulário de edição visível");
+  await editForm.getByLabel("Nome da campanha", { exact: true }).fill(editedName);
+  const editMessage = editForm.locator("textarea[required]");
+  insist((await editMessage.count()) === 1 && await editMessage.isVisible(), "H mensagem da edição visível");
+  await editMessage.fill("Conteúdo editado fictício H; não enviar.");
+  insist(true, "H formulário de edição preenchido");
+  const editResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === `/api/v1/campaigns/${draftRow.id}` && response.request().method() === "PATCH";
+  }, { timeout: 30000 });
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
+  const editResponse = await editResponsePromise;
+  reportDiagnostic("campaign_edit_api", { status: editResponse.status(), ok: editResponse.ok() });
+  insist(editResponse.ok(), "H API edita rascunho");
   await page.getByRole("heading", { name: editedName, exact: true, level: 3 }).waitFor();
   const editedRow = take(await a.client.from("crm_scheduled_campaigns").select("id,name,content")
     .eq("organization_id", orgA).eq("id", draftRow.id).single(), "H edição");
