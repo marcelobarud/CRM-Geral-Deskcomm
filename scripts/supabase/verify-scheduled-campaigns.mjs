@@ -193,14 +193,15 @@ export async function verifyScheduledCampaigns({
   const { timezone } = options;
 
   await page.getByRole("button", { name: "Nova campanha", exact: true }).click();
-  insist(await page.getByLabel("Nome da campanha", { exact: true }).isVisible(), "H formulário aberto");
-  await page.getByLabel("Nome da campanha", { exact: true }).fill(name);
-  const tagSelect = page.getByLabel("Público por tag", { exact: true });
-  insist(await tagSelect.isVisible(), "H seletor de público visível");
+  const createForm = page.locator('form[aria-label="Criar campanha"]');
+  insist(await createForm.isVisible(), "H formulário de criação visível");
+  await page.screenshot({ path: `${dir}/campaigns-create-1440.png`, fullPage: true });
+  await createForm.getByLabel("Nome da campanha", { exact: true }).fill(name);
+  const tagSelect = createForm.locator("select");
+  insist((await tagSelect.count()) === 1 && await tagSelect.isVisible(), "H seletor de público visível");
   insist(true, "H tag A renderizada no seletor");
   await tagSelect.locator(`option[value="${tagA}"]`).waitFor({ state: "attached", timeout: 15000 });
   await tagSelect.selectOption(tagA);
-  await page.screenshot({ path: `${dir}/campaigns-create-1440.png`, fullPage: true });
   await page.getByLabel("Mensagem em texto simples", { exact: true }).fill("Conteúdo fictício H: revisão humana; não enviar.");
   await page.getByRole("button", { name: "Salvar rascunho", exact: true }).click();
   await page.getByRole("heading", { name: name, exact: true }).waitFor();
