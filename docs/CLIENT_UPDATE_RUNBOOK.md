@@ -24,7 +24,7 @@ Reaplicar baseline sobre banco existente ainda tolera somente erros reconhecidos
 5. Executar RLS tenant A/B, anon/viewer/admin/MFA, Auth, Storage, health, worker e scheduler; conferir logs/audit/filas. Nenhum provider real.
 6. Restaurar o bundle em outro destino isolado e validar o fluxo após restore antes de aprovar rollback/recuperação.
 
-O harness `scripts/test-update-com-dados.sh` requer Docker e contém cenário sintético limitado; não cobre por si só estado A–H pós-F/G. O ledger remoto do Geral 1 e os 258 SQLs locais têm identidade/timestamps diferentes; não fabricar mapeamento 1:1 nem rodar `db push` como experimento. A estratégia futura deve manter baseline consolidada + migrations versionadas/MANIFEST e reconciliar ledger num destino descartável.
+O harness `scripts/test-update-com-dados.sh` requer Docker e contém cenário sintético limitado; não cobre por si só estado A–H pós-F/G. O ledger remoto do Geral 1 e os 259 SQLs locais têm identidade/timestamps diferentes; não fabricar mapeamento 1:1 nem rodar `db push` como experimento. A estratégia futura deve manter baseline consolidada + migrations versionadas/MANIFEST e reconciliar ledger num destino descartável.
 
 ## Resultado desta Fase I.1
 

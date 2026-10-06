@@ -149,3 +149,15 @@ A Fase I.1 implementa as correções prioritárias de distribuição, backup/res
 Nesta verificação, `lint` terminou com 0 erros e 351 avisos; `typecheck` e `build` passaram na cópia isolada, enquanto o checkout principal tinha tipos `.next/dev` inválidos gerados pelo servidor de desenvolvimento ativo. `test:shell` passou integralmente. A tentativa da suite unitária global ficou sem progresso por mais de sete minutos, reportou timeout terminando o worker de `app/api/v1/products/route.test.ts` e foi interrompida após mais de 20 minutos; como não houve resumo final, não há contagem confiável nem aprovação global. `test:db` permaneceu bloqueado por `docker: command not found`.
 
 Não foi usado o Geral 1 nem publicada qualquer alteração. A branch `fase-i-1-correcao-readiness-distribuicao` continua local e sem merge, push ou rebase. O arquivo não rastreado `docs/DESKCOMM_UPSTREAM_AUDIT.md` continua preservado e seu hash não mudou.
+
+## Reavaliação após Fase I.2
+
+Em 2026-10-06, a branch `fase-i-1-correcao-readiness-distribuicao` foi publicada no fork, integrada em `main` por fast-forward e enviada ao fork no commit `275e7d85a4e63455301937efffd944cb84cdad12`. A branch `fase-i-2-homologacao-operacional` parte desse commit e permanece local.
+
+O pipeline GHCR construiu e publicou app, worker e scheduler para `main` com metadados comuns (`275e7d8`, schema `0276`); não houve release candidate semver, pull local ou promoção de `stable`. O workflow oficial de release falhou porque a entrada de client ID do GitHub App estava vazia. O CI passou typecheck/lint/build de imagem, mas falhou em unit, invariants e E2E. O harness `test:db` confirmou install e reaplicação da baseline em PostgreSQL efêmero, porém 14 invariants falharam; E2E teve oito casos reprovados. O teste unitário isolado do worker anterior passou 3/3.
+
+A auditoria corrigiu os timestamps de `0013` e `0021` no MANIFEST, preservou o registro histórico sem fonte `0016` com essa limitação explícita e esclareceu que o updater atual reaplica a baseline inteira. Um forward 0277 move a varredura `anon` para o fim da baseline e revoga execução direta da função de trigger; os testes focalizados passaram. Essa alteração permanece apenas na branch local, sem aplicação em Geral 1.
+
+O checkout local não tem Docker, Supabase CLI ou `psql`; clean install comercial, update com dados, backup, restore, novo tenant e jornada integrada A–H não foram executados. A tentativa local de typecheck encontrou erros em `.next/dev/types/routes.d.ts`; lint local terminou com zero erros e 351 avisos. O arquivo e o estado local preexistentes foram preservados.
+
+**A decisão continua NO-GO para Cliente Zero.** Os blockers restantes e a matriz detalhada estão em [CLIENT_ZERO_OPERATIONAL_HOMOLOGATION.md](CLIENT_ZERO_OPERATIONAL_HOMOLOGATION.md). Nenhuma branch da próxima fase foi criada, e o relatório histórico acima foi mantido.

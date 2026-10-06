@@ -170,7 +170,7 @@ Atualizar staging, demo, piloto autorizado, grupo pequeno e demais em janelas pr
 
 ## 18. Migrations
 
-Schema de produto evolui por migration versionada; nenhuma edição de aplicada ou SQL manual não registrado. Preservar tripla do repositório: migration nova + apêndice idempotente no baseline + MANIFEST. Instalação fresca aplica baseline identificado e registra equivalência com a cadeia; update aplica somente pendentes, sem duplicar efeitos.
+Schema de produto evolui por migration versionada; nenhuma edição de migration aplicada ou SQL manual não registrado. Preservar tripla do repositório: migration nova + apêndice idempotente no baseline + MANIFEST. No kit atual, `install.sh` usa a baseline consolidada e `update.sh` reaplica a baseline inteira em banco existente, aceitando somente erros conhecidos de objetos já existentes. O updater não seleciona apenas migrations pendentes pelo ledger; essa é a implementação observada, ainda não homologada em ambiente descartável. Não inferir equivalência da cadeia histórica nem segurança operacional apenas pela presença do apêndice.
 
 PROPOSTA: ledger por instalação com IDs/checksums/status/instantes, baseline de origem e checkpoints de schema; conciliar com histórico nativo da ferramenta escolhida. Checksum divergente ou migration parcialmente aplicada bloqueia a atualização até diagnóstico. Não confiar no último número de arquivo como prova de todos os anteriores.
 
