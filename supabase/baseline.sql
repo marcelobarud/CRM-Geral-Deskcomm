@@ -26698,7 +26698,7 @@ grant execute on function public.fn_crm_tag_impact(uuid,uuid) to authenticated,s
 -- ---- replay autorizado e remoção (migration 0272) ----
 -- Revalida escopo/role no replay e protege remoção direta de regras com MFA.
 create or replace function public.fn_script_command(p_org uuid,p_command jsonb,p_request uuid) returns jsonb
-language plpgsql security definer set search_path=public as $
+language plpgsql security definer set search_path=public as $$
 declare a text:=p_command->>'action'; d jsonb:=p_command->'definition'; chosen uuid;
  s public.crm_short_scripts; v public.crm_script_sessions; c public.conversations;
  step jsonb; answer jsonb; result jsonb; receipt public.idempotency_keys; fingerprint bytea;
@@ -26773,16 +26773,16 @@ begin
  insert into public.idempotency_keys(organization_id,key,endpoint,request_hash,status_code,response_body,expires_at)
  values(p_org,p_request::text,'short-script:'||auth.uid()::text,fingerprint,200,result,now()+interval '24 hours');
  return result;
-end $;
+end $$;
 revoke all on function public.fn_script_command(uuid,jsonb,uuid) from public,anon,authenticated,service_role;
 grant execute on function public.fn_script_command(uuid,jsonb,uuid) to authenticated;
 
 
-create or replace function public.fn_automation_rule_delete_guard() returns trigger language plpgsql security definer set search_path=public as $
+create or replace function public.fn_automation_rule_delete_guard() returns trigger language plpgsql security definer set search_path=public as $$
 begin
  if auth.uid() is not null and (not public.fn_role_at_least(old.organization_id,'manager') or not public.fn_support_write_allowed(old.organization_id) or not public.fn_session_mfa_proven()) then raise exception 'automation_delete_forbidden' using errcode='42501'; end if;
  return old;
-end $;
+end $$;
 revoke all on function public.fn_automation_rule_delete_guard() from public,anon,authenticated,service_role;
 drop trigger if exists automation_rule_delete_guard on public.automation_rules;
 create trigger automation_rule_delete_guard before delete on public.automation_rules for each row execute function public.fn_automation_rule_delete_guard();

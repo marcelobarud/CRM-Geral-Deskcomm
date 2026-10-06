@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCapability } from "@/hooks/capabilities/CapabilitiesProvider";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { apiClient } from "@/lib/api/client";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { randomId } from "@/lib/random-id";
@@ -81,10 +82,10 @@ const REASON: Record<string, string> = {
   cancelled: "Campanha cancelada",
 };
 
-function formatInstant(value: string | null, timezone: string) {
+function formatInstant(value: string | null, timezone: string, locale: string) {
   if (!value) return "—";
   try {
-    return new Intl.DateTimeFormat("pt-BR", {
+    return new Intl.DateTimeFormat(locale, {
       dateStyle: "short",
       timeStyle: "short",
       timeZone: timezone,
@@ -96,6 +97,7 @@ function formatInstant(value: string | null, timezone: string) {
 
 export function CampaignsWorkspace() {
   const t = useT();
+  const locale = useTagDeIdioma();
   const { activeOrg } = useAuth();
   const capability = useCapability("scheduled_campaigns");
   const queryClient = useQueryClient();
@@ -333,7 +335,7 @@ export function CampaignsWorkspace() {
                     {item.crm_tags?.name ?? t("Tag indisponível")} · {t("WhatsApp")}
                   </span>
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {item.scheduled_at ? formatInstant(item.scheduled_at, item.timezone) : t("Sem horário definido")} · {item.counts.total_count} {t("contatos no snapshot")}
+                    {item.scheduled_at ? formatInstant(item.scheduled_at, item.timezone, locale) : t("Sem horário definido")} · {item.counts.total_count} {t("contatos no snapshot")}
                   </span>
                 </button>
               </li>
@@ -407,7 +409,7 @@ export function CampaignsWorkspace() {
                   <h3 className="text-lg font-semibold">{campaign.name}</h3>
                   <p className="mt-1 text-sm">{t(STATUS[campaign.status] ?? campaign.status)}</p>
                   <p className="text-sm text-muted-foreground">{campaign.crm_tags?.name ?? t("Tag indisponível")} · {t("WhatsApp")}</p>
-                  <p className="text-sm text-muted-foreground">{campaign.scheduled_at ? formatInstant(campaign.scheduled_at, campaign.timezone) : t("Sem horário definido")} ({campaign.timezone})</p>
+                  <p className="text-sm text-muted-foreground">{campaign.scheduled_at ? formatInstant(campaign.scheduled_at, campaign.timezone, locale) : t("Sem horário definido")} ({campaign.timezone})</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {canOperate && campaign.status === "draft" && <button className="rounded-md border px-3 py-2 text-sm" onClick={() => { setName(campaign.name); setTagId(campaign.tag_id); setContent(campaign.content); setEditing(true); }}>{t("Editar rascunho")}</button>}

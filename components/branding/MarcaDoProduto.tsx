@@ -1,4 +1,4 @@
-import { LOGOTIPO, SIMBOLO } from "@/lib/branding/desenho";
+import { SIMBOLO } from "@/lib/branding/desenho";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,7 +28,6 @@ type Props = {
 
 const SIMBOLO_CLARO_ESCURO = "fill-[#506d48] dark:fill-[#82a077]";
 const NOME_CLARO_ESCURO = "fill-[#1c1a16] dark:fill-[#f5f4ef]";
-const SUFIXO_CLARO_ESCURO = "fill-[#5d594f] dark:fill-[#8e8b7f]";
 
 // As classes acima repetem os hexes de `CORES_DA_MARCA` porque o Tailwind só
 // gera utilitário para valor LITERAL no fonte. Quem impede os dois de divergirem
@@ -37,7 +36,6 @@ const SUFIXO_CLARO_ESCURO = "fill-[#5d594f] dark:fill-[#8e8b7f]";
 export const CLASSES_DE_COR = {
   simbolo: SIMBOLO_CLARO_ESCURO,
   nome: NOME_CLARO_ESCURO,
-  sufixo: SUFIXO_CLARO_ESCURO,
 } as const;
 
 function acessibilidade(nome: string, decorativo: boolean) {
@@ -66,24 +64,24 @@ export function SimboloDoProduto({ nome, className, decorativo = false }: Props)
 export function LogotipoDoProduto({ nome, className, decorativo = false }: Props) {
   return (
     <svg
-      viewBox={LOGOTIPO.viewBox}
+      viewBox="0 0 720 216"
       className={cn("shrink-0", className)}
       {...acessibilidade(nome, decorativo)}
     >
-      <g className={SIMBOLO_CLARO_ESCURO} transform={LOGOTIPO.simbolo.transform}>
-        <path d={LOGOTIPO.simbolo.d} />
-        <rect {...LOGOTIPO.simbolo.modulo} />
+      <g className={SIMBOLO_CLARO_ESCURO} transform={SIMBOLO.transform}>
+        <path d={SIMBOLO.d} />
+        <rect {...SIMBOLO.modulo} />
       </g>
-      <g className={NOME_CLARO_ESCURO}>
-        {LOGOTIPO.nome.map((g) => (
-          <path key={g.transform} transform={g.transform} d={g.d} />
-        ))}
-      </g>
-      <g className={SUFIXO_CLARO_ESCURO}>
-        {LOGOTIPO.sufixo.map((g) => (
-          <path key={g.transform} transform={g.transform} d={g.d} />
-        ))}
-      </g>
+      <text
+        x="250"
+        y="143"
+        className={NOME_CLARO_ESCURO}
+        fontFamily="Geist, Arial, sans-serif"
+        fontSize="78"
+        fontWeight="600"
+      >
+        {nome}
+      </text>
     </svg>
   );
 }

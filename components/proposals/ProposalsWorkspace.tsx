@@ -5,6 +5,7 @@ import { useCapability } from "@/hooks/capabilities/CapabilitiesProvider";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
+import { randomId } from "@/lib/random-id";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { proposalTotal, type ProposalItem, type ProposalSnapshot } from "@/lib/proposals/contracts";
 import { formatCommercialCents } from "@/lib/reports/commercial";
@@ -62,7 +63,7 @@ export function ProposalsWorkspace({
     const text = JSON.stringify(body);
     let key = operationKeys.current.get(text);
     if (!key) {
-      key = crypto.randomUUID();
+      key = randomId();
       operationKeys.current.set(text, key);
     }
     return key;
@@ -171,13 +172,13 @@ export function ProposalsWorkspace({
     total = proposalTotal(items);
   } catch {}
   const labelClass = "block min-w-0 space-y-1",
-    inputClass = "block w-full min-w-0 rounded border p-2";
+    inputClass = "block w-full min-w-0 rounded-md border p-2";
   if (!authorized) return <p className="p-6">{t("Sem permissão para propostas.")}</p>;
   return (
     <main className="min-w-0 space-y-5 p-4 md:p-6">
       <h1 className="text-2xl font-semibold">{t("Propostas")}</h1>
       {!cap?.can_execute && (
-        <div role="status" className="rounded border p-3">
+        <div role="status" className="rounded-md border p-3">
           <p>{cap?.reason ?? t("Consultando disponibilidade…")}</p>
           <p>{t("Histórico preservado. Novas ações estão bloqueadas.")}</p>
           <a className="underline" href="/app/settings/capabilities">
@@ -199,7 +200,7 @@ export function ProposalsWorkspace({
           />
         </label>
         {cap?.can_execute && (
-          <button className="rounded border p-2" onClick={() => start()}>
+          <button className="rounded-md border p-2" onClick={() => start()}>
             {t("Nova proposta")}
           </button>
         )}
@@ -215,7 +216,7 @@ export function ProposalsWorkspace({
         <>
           <ul className="space-y-2">
             {list.data?.data.map((row) => (
-              <li key={row.id} className="rounded border p-3">
+              <li key={row.id} className="rounded-md border p-3">
                 <button
                   className="underline"
                   onClick={() => {
@@ -274,7 +275,7 @@ export function ProposalsWorkspace({
         </div>
       )}
       {p && (
-        <section aria-label={t("Ficha da proposta")} className="space-y-3 rounded border p-4">
+        <section aria-label={t("Ficha da proposta")} className="space-y-3 rounded-md border p-4">
           <h2 className="text-xl">{p.title}</h2>
           <p>{p.notes}</p>
           <p>
@@ -294,7 +295,7 @@ export function ProposalsWorkspace({
                 onClick={() => {
                   setPrepareOnly(false);
                   setSending(true);
-                  setSendKey(sendKey ?? crypto.randomUUID());
+                  setSendKey(sendKey ?? randomId());
                 }}
               >
                 {t("Registrar versão como enviada")}
@@ -303,7 +304,7 @@ export function ProposalsWorkspace({
                 onClick={() => {
                   setPrepareOnly(true);
                   setSending(true);
-                  setSendKey(sendKey ?? crypto.randomUUID());
+                  setSendKey(sendKey ?? randomId());
                 }}
               >
                 {t("Preparar PDF da versão")}
@@ -341,7 +342,7 @@ export function ProposalsWorkspace({
           {p.crm_proposal_versions
             .toSorted((a, b) => b.version_number - a.version_number)
             .map((v) => (
-              <article key={v.id} className="space-y-2 rounded border p-3">
+              <article key={v.id} className="space-y-2 rounded-md border p-3">
                 <h4>
                   v{v.version_number} ·{" "}
                   {t(
@@ -395,7 +396,7 @@ export function ProposalsWorkspace({
         <form
           role="dialog"
           aria-label={t("Registrar envio da versão")}
-          className="space-y-3 rounded border p-4"
+          className="space-y-3 rounded-md border p-4"
           onSubmit={(e) => {
             e.preventDefault();
             void execute(async () => {
@@ -456,7 +457,7 @@ export function ProposalsWorkspace({
       {editing && cap?.can_execute && (
         <form
           aria-label={t("Rascunho da proposta")}
-          className="space-y-4 rounded border p-4"
+          className="space-y-4 rounded-md border p-4"
           onSubmit={(e) => {
             e.preventDefault();
             void execute(async () => {
@@ -619,7 +620,7 @@ export function ProposalsWorkspace({
           <fieldset className="space-y-3">
             <legend>{t("Itens da proposta")}</legend>
             {items.map((i, n) => (
-              <div key={n} className="grid min-w-0 gap-2 rounded border p-3 md:grid-cols-4">
+              <div key={n} className="grid min-w-0 gap-2 rounded-md border p-3 md:grid-cols-4">
                 <label className={labelClass}>
                   {t("Descrição")} · {n + 1}
                   <input

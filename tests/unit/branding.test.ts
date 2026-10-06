@@ -12,7 +12,7 @@ describe("resolveBranding", () => {
     expect(resolveBranding(undefined, undefined)).toEqual({
       name: DEFAULT_APP_NAME,
       logoUrl: null,
-      initial: "D",
+      initial: "C",
     });
   });
 
@@ -131,7 +131,7 @@ describe("nome do arquivo de códigos de recuperação", () => {
   it("deriva o prefixo da marca, sem acento e sem espaço", () => {
     expect(prefixoDoArquivo("Vendas Turbo")).toBe("vendas-turbo");
     expect(prefixoDoArquivo("Ótima Gestão")).toBe("otima-gestao");
-    expect(prefixoDoArquivo(DEFAULT_APP_NAME)).toBe("deskcommcrm");
+    expect(prefixoDoArquivo(DEFAULT_APP_NAME)).toBe("crm-geral");
   });
 
   it("não devolve hífen pendurado nem repetido", () => {
@@ -194,8 +194,6 @@ type CategoriaDeMarca =
   | "DIVIDA"
   /** Só desenvolvimento: fixture de teste. Não embarca na imagem. */
   | "DEV"
-  /** A definição do nome padrão do produto. Tem de existir em UM lugar. */
-  | "PADRAO";
 
 type EntradaDeMarca = {
   categoria: CategoriaDeMarca;
@@ -226,6 +224,12 @@ const MARCA_CONGELADA: Record<string, EntradaDeMarca> = {
     motivo:
       "é a guarda do contrato acima: este teste é o que reprova quem renomear o header. Trocar a string aqui para 'limpar a marca' desarmaria a única proteção que o contrato tem",
     marcas: ["x-deskcomm-event", "x-deskcomm-signature", "x-deskcomm-signature"],
+  },
+  "app/design/lib/variant-context.tsx": {
+    categoria: "INFRA",
+    motivo:
+      "chave localStorage das preferências do showcase de design. Não é texto mostrado no produto; mantê-la evita perder preferências locais já salvas",
+    marcas: ["deskcomm.designshowcase.v1"],
   },
   "lib/mcp/server.ts": {
     categoria: "PROTOCOLO",
@@ -322,13 +326,6 @@ const MARCA_CONGELADA: Record<string, EntradaDeMarca> = {
     marcas: ["deskcommcrm", "deskcommcrm", "deskcommcrm"],
   },
 
-  // ─── PADRAO — a marca padrão precisa existir em algum lugar. ───
-  "lib/branding.ts": {
-    categoria: "PADRAO",
-    motivo:
-      "é a DEFINIÇÃO de DEFAULT_APP_NAME — o valor que aparece quando o operador não configurou marca nenhuma. Se esta linha sumir, some o padrão",
-    marcas: ["deskcommcrm"],
-  },
 };
 
 /**
@@ -348,8 +345,6 @@ const MARCA_CONGELADA: Record<string, EntradaDeMarca> = {
  *    `.next/static` e `public/`;
  *  - `evidence/` e `loop/`: ferramental de sessão, mesma razão;
  *  - `types/`: um único `.d.ts`, sem string de runtime (medido: 0 ocorrências);
- *  - `app/design/`: é o showcase interno do design system, a única tela em que
- *    o nome do produto é o assunto da página.
  */
 const RAIZES_VARRIDAS = ["app", "components", "hooks", "lib", "workers"] as const;
 
@@ -384,7 +379,6 @@ function arquivosVarridos(dir: string): string[] {
   const alvos: string[] = [];
   for (const entrada of fs.readdirSync(path.join(RAIZ, dir), { withFileTypes: true })) {
     const rel = path.posix.join(dir, entrada.name);
-    if (rel.startsWith("app/design")) continue;
     if (entrada.isDirectory()) alvos.push(...arquivosVarridos(rel));
     else if (rel.endsWith(".ts") || rel.endsWith(".tsx")) alvos.push(rel);
   }
@@ -472,7 +466,7 @@ describe("catraca de marca hardcoded", () => {
   });
 
   it("toda entrada declara categoria e explica o porquê", () => {
-    const validas: CategoriaDeMarca[] = ["PROTOCOLO", "INFRA", "DIVIDA", "DEV", "PADRAO"];
+    const validas: CategoriaDeMarca[] = ["PROTOCOLO", "INFRA", "DIVIDA", "DEV"];
     const ruins = Object.entries(MARCA_CONGELADA)
       .filter(([, e]) => !validas.includes(e.categoria) || e.motivo.trim().length < 40)
       .map(([f]) => f);
