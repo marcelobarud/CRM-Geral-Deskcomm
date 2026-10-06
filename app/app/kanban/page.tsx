@@ -16,9 +16,8 @@ export const dynamic = "force-dynamic";
  * um bug visível: a policy `crm_pipelines_select` libera TODAS as organizações do
  * usuário (`organization_id in fn_user_org_ids()`) e libera tudo para
  * `fn_is_platform_admin()`. Quem participa de duas organizações via as duas
- * listas misturadas — e como o gatilho `trg_seed_default_pipeline_for_org` semeia
- * um funil "Pedidos" em toda organização nova, a tela mostrava várias linhas
- * idênticas, indistinguíveis, cada uma levando a um quadro diferente. A RLS
+ * listas misturadas — instalações legadas podiam ter funis com nomes repetidos,
+ * cada uma levando a um quadro diferente. A RLS
  * responde "pode ver?"; a tela precisa responder "quer ver agora?".
  *
  * ⚠️ A LEITURA É ABERTA, A ESCRITA É manager+. Ver a lista e abrir o quadro é

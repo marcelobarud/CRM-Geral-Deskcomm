@@ -4,11 +4,9 @@ import { rotuloDoPasso, type EtapaDoMapa } from "@/lib/leads/agent-mapping";
  * As regras da edição das etapas do funil, sem tocar no banco.
  *
  * Hoje nenhuma tela CRIA, RENOMEIA OU ARQUIVA etapa (a de mapeamento do
- * assistente escreve `agent_stage_hint`, e é o único outro escritor): o gatilho
- * `trg_seed_default_pipeline_for_org` semeia um funil de e-commerce em toda
- * organização criada, então uma clínica abre o sistema e vê "Carrinho
- * abandonado" sem ter como corrigir. Este arquivo é a camada pura que sustenta
- * a tela que resolve isso.
+ * assistente escreve `agent_stage_hint`, e é o único outro escritor). O seed
+ * legado de e-commerce pode permanecer em tenants anteriores à migration 0276;
+ * este arquivo é a camada pura que sustenta a tela de personalização do funil.
  *
  * ⚠️ POR QUE VALIDAR SE O BANCO JÁ RECUSA. O CHECK e os índices únicos são a
  * rede de segurança, não a primeira linha: `23505 uniq_crm_stages_pipeline_won`
@@ -166,12 +164,10 @@ type PassoDeDesfecho = keyof typeof CAMPO_DO_PASSO;
  * assistente acompanhar), enquanto desmarcar deixaria o funil sem onde fechar
  * negócio — `/leads/[id]/win` passa a responder 422 `pipeline_no_won_stage`.
  *
- * ⚠️ A GUARDA OLHA `is_won`/`is_lost`, NÃO O HINT. O gatilho
- * `fn_seed_default_pipeline_for_org` (baseline.sql:707) semeia "Pago" com
- * `is_won=true, agent_stage_hint=null` — o backfill da 0084 rodou uma vez, sobre
- * o que já existia. Chavear no hint deixaria a instalação FRESCA, que é o
- * cenário deste arquivo, sem proteção nenhuma. E não há o que perder: o CHECK já
- * garante que hint='won' só existe em etapa com `is_won`.
+ * ⚠️ A GUARDA OLHA `is_won`/`is_lost`, NÃO O HINT. A migration 0276 mapeia
+ * `won/lost` também em novos seeds, mas tenants legados podem manter o hint nulo.
+ * Chavear a proteção só no hint deixaria esses funis sem defesa. E não há o que
+ * perder: o CHECK garante que hint='won' só existe em etapa com `is_won`.
  */
 export function validarMarcacao(
   etapas: EtapaEditavel[],

@@ -2,10 +2,10 @@ import { requireSupportWrite } from "@/lib/impersonate/support";
 /**
  * POST /api/v1/pipelines/[id]/stages — cria uma etapa no fim do funil.
  *
- * Até a tela de etapas existir, NENHUMA superfície criava etapa: o gatilho
- * `trg_seed_default_pipeline_for_org` semeia um funil de e-commerce em toda
- * organização nova, então uma clínica abre o sistema e vê "Carrinho abandonado"
- * sem ter como corrigir.
+ * Até a tela de etapas existir, NENHUMA superfície criava etapa: instalações
+ * anteriores à migration 0276 recebiam o seed de e-commerce, então uma clínica
+ * podia abrir o sistema com "Carrinho abandonado" sem ter como corrigir. O seed
+ * atual para novas organizações é genérico; tenants antigos preservam seus dados.
  *
  * ⚠️ AQUI SÓ HÁ TRANSPORTE. A operação inteira vive em
  * `lib/leads/stage-operations.ts` porque o agente de IA também organiza o funil

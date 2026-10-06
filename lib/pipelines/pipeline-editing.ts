@@ -253,10 +253,9 @@ export function regrasQueApontamPara(regras: RegraDeAutomacao[], pipelineId: str
  * `pipeline_no_won_stage` sem ela, ou seja, o funil nasceria incapaz de fechar
  * negócio.
  *
- * Os nomes são neutros de propósito. O gatilho `fn_seed_default_pipeline_for_org`
- * semeia um funil de e-commerce ("Carrinho abandonado") em toda org nova, e é
- * justamente isso que uma clínica não consegue usar — repetir o erro no funil
- * criado à mão seria absurdo. Tudo aqui é renomeável em Configurações › Funis.
+ * Os nomes são neutros de propósito. O seed 0276 também é genérico para novas
+ * organizações; funis anteriores podem manter vocabulário vertical. Tudo aqui é
+ * renomeável em Configurações › Funis.
  */
 export const ETAPAS_INICIAIS: ReadonlyArray<{
   name: string;

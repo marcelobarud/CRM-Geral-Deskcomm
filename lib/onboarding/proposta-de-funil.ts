@@ -3,14 +3,14 @@
  *
  * ═══ O QUE ISTO RESOLVE ═══
  *
- * `trg_seed_default_pipeline_for_org` semeia o MESMO funil de e-commerce em toda
- * organização criada: "Carrinho abandonado", "Aguardando pagamento", "Em
- * separação", "Enviado". Uma clínica termina a instalação e abre o quadro dela
- * com uma coluna chamada "Carrinho abandonado".
+ * O seed anterior à migration 0276 usava o funil de e-commerce
+ * ("Carrinho abandonado", "Aguardando pagamento", "Em separação", "Enviado").
+ * Novas organizações agora recebem um funil genérico; este módulo continua sendo
+ * uma proposta opcional para personalizá-lo com o contexto do negócio.
  *
  * E tem a metade que não se vê. Medido neste banco em 2026-08-13: **312 etapas
  * em 43 funis, 4 com `agent_stage_hint`** — e as 4 são de organizações de teste.
- * Ou seja, toda instalação nasce com o funcionário incapaz de mover UM card:
+ * Ou seja, os tenants medidos naquela data nasciam com o funcionário incapaz de mover UM card:
  * `coberturaDoFunil` devolve `mudo: true`. Ele tem o funil no escopo (`pipeline_ids`)
  * e não sabe o que significa nenhuma das colunas.
  *
