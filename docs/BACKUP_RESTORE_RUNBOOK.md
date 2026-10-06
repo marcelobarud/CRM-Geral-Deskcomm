@@ -1,36 +1,50 @@
 # Runbook de backup e restore — CRM Geral
 
-**Não homologado nesta Fase I:** nenhum backup/restore isolado foi executado. Este documento registra cobertura e procedimento seguro pretendido, não uma prova de recuperação.
+**Estado Fase I.1: desenho implementado, execução não homologada.** Docker/psql não estão disponíveis neste ambiente e nenhum backup/restore foi executado. O Geral 1 é staging ativo e não pode ser destino de restore. Até um ensaio isolado passar, backup/restore permanecem bloqueadores P1 e a recomendação é NO-GO.
 
-## Cobertura atual
+## O que o pacote inclui
 
-| Mecanismo | Cobertura | Cadência/retenção | Lacunas |
-|---|---|---|---|
-| hostgator-setup-kit/backup.sh | dump PostgreSQL e volume waha-data | comentário recomenda cron diário às 03:00; mantém 14 arquivos por tipo | não guarda bytes do Storage; destino padrão na mesma VPS; role pode produzir backup parcial; não executado aqui |
-| scripts/backup-db.sh | dump do schema public | 14 dias por padrão | sem Storage, Auth gerenciado, volume WAHA ou configuração externa |
-| Backup gerenciado Supabase | plano/configuração não conferidos para Geral 1 | não confirmado | bytes de Storage ficam fora do backup do banco |
+`hostgator-setup-kit/backup.sh` exige `BACKUP_DIR` absoluto fora do checkout. Cada execução grava num diretório temporário e só o publica ao final, com checksum SHA-256 do pacote. A operação falha se a exportação de qualquer componente ou a releitura dos checksums falhar. O diretório padrão dentro da VPS foi removido; o operador deve apontar um mount/destino externo e criptografado.
 
-Geral 1 tem seis buckets: ai-policy, brand-logos, lgpd-exports, proposal-documents, skill-assets e whatsapp-media; todos tinham zero objetos na consulta. A documentação oficial explica que backup de banco não inclui binários de Storage: [Database Backups](https://supabase.com/docs/guides/platform/backups). Clonar para projeto novo também exige reconfigurar Storage, Auth, Realtime e opções: [Restore to a new project](https://supabase.com/docs/guides/platform/clone-project).
+O pacote contém:
 
-## Política a aprovar
+- dump PostgreSQL no formato custom, com dados dos schemas `public`, `private` e `auth`; sessões e tabelas transitórias de refresh/challenge/flow são excluídas;
+- a `baseline.sql` e o `MANIFEST.md` presentes no checkout usado;
+- inventário/configuração dos buckets e bytes de cada objeto no Storage JSONL, com path, MIME, cache-control, metadados e SHA-256 por objeto;
+- versão do app, commit, versão do schema e refs das imagens sem valores de configuração;
+- `waha-data.tar.gz` somente quando `BACKUP_WAHA_DATA=1` for pedido; inclui estado sensível de sessão e exige destino protegido.
 
-Definir RPO/RTO, cadência, retenção, criptografia, acesso, destino offsite e responsável. Separar banco, objetos Storage, volumes de canal usados, configuração não secreta e secrets em vault. Salvar versão/schema, timestamp, tamanho e checksum; não salvar strings de conexão, tokens ou dados reais no Git.
+O arquivo não copia `.env`, service-role key, connection strings ou tokens. A recuperação precisa de configuração separada em vault: secrets do runtime, project/API keys, Auth URLs/providers, SMTP/OAuth, DNS e serviços externos. Sessões Auth são excluídas; os usuários precisam autenticar novamente. A compatibilidade de hashes de senha, MFA e Auth entre projetos ainda não foi provada. Não declare recuperação completa de Auth.
 
-## Execução do backup após aprovação
+## Criar e conferir um backup
 
-1. Criar janela e limitar operações destrutivas.
-2. Gerar dump lógico com versão/role compatíveis; confirmar exit code, tamanho e checksum.
-3. Exportar bytes de cada bucket preservando bucket/path e metadados necessários; não substituir arquivo por URL assinada.
-4. Salvar volumes persistentes necessários ao canal usado pelo cliente.
-5. Copiar artefatos cifrados para destino externo, aplicar retenção aprovada e verificar leitura.
-6. Registrar projeto, release e configuração requerida sem valores secretos.
+1. Defina `BACKUP_DIR` para um destino externo ao checkout, com criptografia em repouso e acesso controlado. Em produção, replique o bundle para storage offsite; o script não criptografa o conteúdo por conta própria.
+2. Rode `bash hostgator-setup-kit/backup.sh` no diretório da instalação, com Docker/Compose funcionais e com a imagem do app contendo `scripts/storage-archive.mjs`.
+3. Confirme o caminho final impresso, o exit code zero e o arquivo `SHA256SUMS`. Rode `sha256sum --check SHA256SUMS` depois de copiar o bundle para o destino externo.
+4. Se o volume WAHA fizer parte da política aprovada, repita com `BACKUP_WAHA_DATA=1`; o volume contém estado de sessão e não deve ser aberto nem incluído em artefato de teste.
+5. Registre RPO/RTO, retenção, criptografia, localização e responsável. Não configure cron antes de validar espaço, rotação e cópia offsite.
 
-## Restore em isolamento
+O atualizador chama este backup antes de mudar código ou banco e para se ele falhar. `--skip-backup` é uma exceção explícita; não substitui um pacote recente verificado.
 
-1. Criar novo projeto/ambiente descartável compatível e confirmar que o destino não é Geral 1 nem a instalação ativa.
-2. Restaurar o banco vazio e reconfigurar extensions, roles/senhas customizadas, Auth URLs/providers, buckets/policies, Realtime e functions.
-3. Restaurar bytes de Storage e conferir contagens/checksums; recuperar volumes de canal apenas se necessário.
-4. Validar organizações, usuários/relacionamentos autorizados, contatos, empresas, oportunidades, tags, tarefas, propostas, automações, campanhas, FKs, RLS, roles, MFA e referências a arquivos.
-5. Rodar testes A/B e anon/viewer/admin, medir downtime e registrar limitações antes de decidir qualquer cutover.
+## Restore isolado
 
-hostgator-setup-kit/restore.sh confirma e restaura na conexão que está configurada; não usar como rollback automático nem contra Geral 1. Auth gerenciado, sessões, metadata de Storage, bytes de Storage, configuração do projeto, secrets e release são componentes separados. Não prometer recuperação de Auth ou sessões sem teste do caminho adotado.
+`hostgator-setup-kit/restore.sh <bundle>` é intencionalmente explícito e destrutivo **somente para o alvo declarado**. Antes de escrever, valida os checksums, exige URL/ref/chave service-role/DB URL separados, recusa Geral 1 e a origem, confere que a URL, ref e conexão PostgreSQL identificam o mesmo projeto, exige organização/Auth/Storage vazios e pede que o operador digite a referência exata. A credencial do Storage trafega por stdin, não por argumentos nem por log. Nunca forneça os valores do projeto de origem.
+
+O procedimento aplica a baseline capturada, restaura os dados customizados/Auth, depois recria buckets e faz upload/verificação SHA-256 dos objetos. Se qualquer etapa falhar, o alvo pode ficar parcialmente preenchido: descarte o projeto descartável e recomece com outro destino vazio. Não aponte para uma instalação ativa. O restore não restaura secrets, Auth provider configuration, JWT/API keys, sessões ou configuração externa.
+
+Após o script terminar, ainda é obrigatório provar, no destino isolado:
+
+- schema/invariants, organizations, membership/admin e usuários Auth;
+- RLS real com tenant A/B, anon, viewer, agent e admin, mais MFA aplicável;
+- bucket/path/contagem/hash, incluindo PDF sintético de proposta e logo sintético;
+- ligação proposal version → object path → bytes/hash;
+- login, health, worker/scheduler e jornada comercial sem provider/contato real.
+
+Um teste unitário com Storage em memória cobre bytes sintéticos de PDF/logo e recusa de destinos conhecidos; ele não substitui restore Supabase real. Nenhum cenário A/B ou RLS após restore foi executado nesta Fase I.1.
+
+## Limites e fontes
+
+- Backup lógico do banco não contém os bytes de Storage; consulte [Database Backups do Supabase](https://supabase.com/docs/guides/platform/backups).
+- Clonagem de projeto também não substitui cópia de Storage, Auth settings, chaves, Realtime ou Edge Functions; consulte [Clone project](https://supabase.com/docs/guides/platform/clone-project).
+- `scripts/backup-db.sh` continua sendo ferramenta local de regressão para schema `public`, não backup comercial.
+- Instalação/restore clean, compatibilidade dos dumps Auth/managed schema, volume WAHA e checks RLS pós-restore seguem **NOT TESTED**. Não usar Geral 1 como alvo de ensaio.

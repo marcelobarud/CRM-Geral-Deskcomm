@@ -10,6 +10,10 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# O harness é offline por padrão. Cada prova de release ou atualização declara
+# sua origem sintética; variáveis herdadas da máquina não podem mudar o cenário.
+unset REPO_URL CRM_GERAL_REPO_URL
+
 # O _common.sh vem antes porque é dele que saem `nome_do_projeto_compose`,
 # `veredito_rede_do_proxy` e `garantir_rede_do_proxy` — o install.sh e o update.sh
 # compartilham essas três, e a suíte exercita as três de um lugar só.
@@ -1391,7 +1395,22 @@ montar_vps() {
   # aconteceu — o elo mais fácil de quebrar sem ninguém ver.
   cp install.sh update.sh backup.sh _common.sh marca-emails.sh "$raiz/"
   : > "$VPS_PROJ/docker-compose.prod.yml"
-  cat > "$raiz/bin/docker"
+  cat > "$raiz/bin/docker.fixture"
+  # As rotinas de Postgres passam a URI somente pelo stdin do Docker. O wrapper
+  # registra a fixture sintética recebida separadamente, sem recolocá-la nos
+  # argumentos simulados que o teste usa para verificar a chamada.
+  cat > "$raiz/bin/docker" <<'DOCKERWRAPPER'
+#!/usr/bin/env bash
+if [[ " $* " == *" -i "* && " $* " == *" postgres:17-alpine sh -c "* ]]; then
+  IFS= read -r db_uri || db_uri=""
+  client=unknown
+  for arg in "$@"; do
+    case "$arg" in psql|pg_dump) client="$arg" ;; esac
+  done
+  printf '%s\t%s\t%s\n' "$client" "$db_uri" "$*" >> "${DB_CONNECTION_LOG:?log de conexão da fixture ausente}"
+fi
+exec "$VPS_RAIZ/bin/docker.fixture" "$@"
+DOCKERWRAPPER
   # Só o v_supabase_url exige resposta online (000 reprova); os outros toleram.
   #
   # O dublê fala DOIS protocolos porque o install.sh passou a sondar o GHCR
@@ -1446,7 +1465,7 @@ case "${1:-}" in
 esac
 exit 0
 STUB
-  chmod +x "$raiz/bin/docker" "$raiz/bin/curl" "$raiz/bin/crontab"
+  chmod +x "$raiz/bin/docker" "$raiz/bin/docker.fixture" "$raiz/bin/curl" "$raiz/bin/crontab"
 }
 
 # rodar <script> <flags> [linha extra do .env] [respostas do modo interativo]
@@ -1461,17 +1480,34 @@ STUB
 # pedir — o teste passaria a depender da máquina, e faria chamada de rede a
 # partir de um .env de mentira. O cenário declara o próprio ambiente.
 rodar() {
-  local script="$1" flags="$2"
+  local script="$1" flags="$2" fixture_repo repo_expected repo_override="${REPO_URL:-}"
   printf '%s\n%s\n' "$BASE_ENV" "${3-}" > "$VPS_PROJ/.env"
   : > "$VPS_LOG"
+  : > "$VPS_RAIZ/db-connections.tsv"
+  repo_expected="${REPO_URL:-${CRM_GERAL_REPO_URL:-https://github.com/marcelobarud/CRM-Geral-Deskcomm.git}}"
+  if [ "$script" = "update.sh" ]; then
+    # `install.sh` foi sourceado acima para testar funções e define REPO_URL ao
+    # default do fork; não deixe esse valor mascarar o override explícito da
+    # origem sintética de update.
+    repo_override=""
+    fixture_repo="$(git -C "$VPS_PROJ" config --local --get remote.origin.url 2>/dev/null || true)"
+    if [ -z "$fixture_repo" ]; then
+      fixture_repo="https://crm-geral-fixture.invalid/repo.git"
+      git -C "$VPS_PROJ" remote add origin "$fixture_repo"
+    else
+      fixture_repo="https://crm-geral-fixture.invalid/repo.git"
+      git -C "$VPS_PROJ" remote set-url origin "$fixture_repo"
+    fi
+    repo_expected="$fixture_repo"
+  fi
   if [ $# -ge 4 ]; then
     printf '%s' "$4" > "$VPS_RAIZ/respostas.txt"
-    (cd "$VPS_PROJ" && env PATH="$VPS_RAIZ/bin:$PATH" DOCKER_LOG="$VPS_LOG" CRONTAB_SANDBOX="$CRONTAB_SANDBOX" \
-      SUPABASE_ACCESS_TOKEN= \
+    (cd "$VPS_PROJ" && env PATH="$VPS_RAIZ/bin:$PATH" VPS_RAIZ="$VPS_RAIZ" DOCKER_LOG="$VPS_LOG" CRONTAB_SANDBOX="$CRONTAB_SANDBOX" \
+      DB_CONNECTION_LOG="$VPS_RAIZ/db-connections.tsv" REPO_URL="$repo_override" CRM_GERAL_REPO_URL="$repo_expected" SUPABASE_ACCESS_TOKEN= \
       bash "$VPS_RAIZ/$script" $flags <"$VPS_RAIZ/respostas.txt" 2>&1 || true) | sed -E 's/\x1b\[[0-9;]*m//g'
   else
-    (cd "$VPS_PROJ" && env PATH="$VPS_RAIZ/bin:$PATH" DOCKER_LOG="$VPS_LOG" CRONTAB_SANDBOX="$CRONTAB_SANDBOX" \
-      SUPABASE_ACCESS_TOKEN= \
+    (cd "$VPS_PROJ" && env PATH="$VPS_RAIZ/bin:$PATH" VPS_RAIZ="$VPS_RAIZ" DOCKER_LOG="$VPS_LOG" CRONTAB_SANDBOX="$CRONTAB_SANDBOX" \
+      DB_CONNECTION_LOG="$VPS_RAIZ/db-connections.tsv" REPO_URL="$repo_override" CRM_GERAL_REPO_URL="$repo_expected" SUPABASE_ACCESS_TOKEN= \
       bash "$VPS_RAIZ/$script" $flags 2>&1 || true) | sed -E 's/\x1b\[[0-9;]*m//g'
   fi
 }
@@ -1813,9 +1849,22 @@ case "$1" in
 esac
 exit 0
 STUB
+  origem="$TMP_PRIV/origem.git"
+  git init --quiet --bare "$origem"
+  git init --quiet "$TMP_PRIV/release"
+  (
+    cd "$TMP_PRIV/release" || exit 1
+    git config user.email teste@exemplo.com; git config user.name teste
+    printf 'release fixture\n' > release.txt
+    git add release.txt; git commit --quiet -m release
+    git tag v1.0.0
+    git remote add origin "$origem"
+    git push --quiet origin HEAD --tags
+  )
+  export REPO_URL="$origem"
   export DUBLE_GHCR=403          # pacote existe mas está PRIVADO
   saida="$(rodar install.sh --yes)"
-  unset DUBLE_GHCR
+  unset DUBLE_GHCR REPO_URL
 
   if ! printf '%s' "$saida" | grep -q "construídas neste servidor"; then
     printf '  ✗ com as imagens inalcançáveis, o instalador não avisou que ia construir aqui\n'
@@ -1869,7 +1918,8 @@ STUB
     env_ia="$(printf '%s\n' "$BASE_ENV" | grep -v '^ANTHROPIC_API_KEY=')"
     printf '%s\n%s=%s\n' "$env_ia" "$var" "'$val'" > "$raiz/crmia/.env"
     : > "$raiz/docker.log"
-    saida="$(cd "$raiz/crmia" && env PATH="$raiz/bin:$PATH" DOCKER_LOG="$raiz/docker.log" \
+    saida="$(cd "$raiz/crmia" && env PATH="$raiz/bin:$PATH" VPS_RAIZ="$raiz" DOCKER_LOG="$raiz/docker.log" \
+      DB_CONNECTION_LOG="$raiz/db-connections.tsv" REPO_URL= CRM_GERAL_REPO_URL=https://crm-geral-fixture.invalid/repo.git \
       CRONTAB_SANDBOX="$CRONTAB_SANDBOX" bash "$raiz/install.sh" --yes 2>&1 || true \
       | sed -E 's/\x1b\[[0-9;]*m//g')"
     if printf '%s' "$saida" | grep -q 'comando não encontrado\|command not found'; then
@@ -2188,14 +2238,13 @@ echo "DDL: a conexão do schema é separada da que vai para os contêineres (iss
 # nenhum cenário anterior desta suíte tocava neste caminho.
 
 # As connection strings que chegaram ao psql/pg_dump no cenário, sem repetir.
-strings_de_banco() { grep -oE '(psql|pg_dump) [^ ]+' "$VPS_LOG" | awk '{print $2}' | sort -u; }
+strings_de_banco() { awk -F '\t' 'NF >= 3 {print $2}' "$VPS_RAIZ/db-connections.tsv" | sort -u; }
 # Idem, tirando a sonda do validador (`psql <url> -tAc select 1`): ela existe
 # justamente para testar a conexão DO APP, então usar a string do app ali é o
 # comportamento certo — é o que a pessoa acabou de responder. Sem esta distinção
 # o caso mediria "trocaram tudo", que é outra coisa (e um defeito).
 strings_de_schema() {
-  grep -E '(psql|pg_dump) ' "$VPS_LOG" | grep -v -- '-tAc select 1$' \
-    | grep -oE '(psql|pg_dump) [^ ]+' | awk '{print $2}' | sort -u
+  awk -F '\t' 'NF >= 3 && $3 !~ /-tAc select 1$/ {print $2}' "$VPS_RAIZ/db-connections.tsv" | sort -u
 }
 # Derivada do BASE_ENV, não copiada: duas cópias do mesmo literal desincronizam
 # no dia em que o cenário-base trocar de string, e aí o teste reprova por engano.
@@ -2308,11 +2357,23 @@ TMP_DDL_C="$(mktemp -d)"
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$DOCKER_LOG"
 case "$1" in
-  compose) case "$*" in *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;; esac; exit 0 ;;
+  compose)
+    case "$*" in
+      *storage-archive.mjs*export*) printf '{"type":"header","source_project_ref":"fixture"}\n{"type":"end"}\n' ;;
+      *"node -p"*) printf 'fixture\n' ;;
+      *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;;
+    esac
+    exit 0 ;;
+esac
+case "$*" in
+  *" pg_dump "*) printf 'synthetic database dump\n'; exit 0 ;;
+  *" pg_restore --list "*) printf 'synthetic toc\n'; exit 0 ;;
 esac
 exit 0
 STUB
-  mkdir -p "$VPS_PROJ/supabase"; : > "$VPS_PROJ/supabase/baseline.sql"
+  mkdir -p "$VPS_PROJ/supabase/migrations"
+  : > "$VPS_PROJ/supabase/baseline.sql"
+  printf '# Synthetic migration manifest\n' > "$VPS_PROJ/supabase/migrations/MANIFEST.md"
   # O update.sh decide o que instalar por TAG: sem versão publicada ele para
   # antes do banco, e o teste passaria vazio.
   (cd "$VPS_PROJ" && git init -q -b main . \
@@ -2321,6 +2382,7 @@ STUB
     && git tag v9.9.9) >/dev/null 2>&1
 
   saida="$(rodar update.sh "" "SUPABASE_DB_ADMIN_URL='$URL_DO_DONO'
+BACKUP_DIR='$VPS_RAIZ/backup'
 INTERNAL_SECRET='segredo-de-teste'
 NEXT_PUBLIC_APP_URL='https://crm.exemplo.com.br'")"
 
@@ -2329,7 +2391,15 @@ NEXT_PUBLIC_APP_URL='https://crm.exemplo.com.br'")"
   if [ "${n_dump:-0}" -lt 1 ] || [ "${n_psql:-0}" -lt 2 ]; then
     printf '  ✗ o update.sh não chegou ao banco (pg_dump=%s psql=%s) — inconclusivo, não verde\n' \
       "${n_dump:-0}" "${n_psql:-0}"
-    printf '     última linha da saída: %s\n' "$(printf '%s' "$saida" | tail -1)"; exit 1
+    printf '     captura=%s bytes; fixture de update=%s; origin=%s\n' \
+      "${#saida}" "$VPS_RAIZ/update.sh" "$(git -C "$VPS_PROJ" config --local --get remote.origin.url 2>/dev/null || echo ausente)"
+    printf '     saída final sanitizada:\n'
+    printf '%s\n' "$saida" | sed -E 's#postgres(ql)?://[^[:space:]]+#<connection-string>#g' | tail -12 | sed 's/^/       /'
+    if [ -s "$VPS_LOG" ]; then
+      printf '     chamadas Docker sem URIs:\n'
+      tail -8 "$VPS_LOG" | sed 's/^/       /'
+    fi
+    exit 1
   fi
   vistas="$(strings_de_banco)"
   if [ "$vistas" != "$URL_DO_DONO" ]; then
@@ -2368,8 +2438,8 @@ STUB
 NEXT_PUBLIC_APP_URL='https://crm.exemplo.com.br'"
   # Sem token — o estado de quem instalou pelo caminho documentado.
   unset SUPABASE_ACCESS_TOKEN
-  um="$(rodar update.sh "" "$extra")"
-  dois="$(rodar update.sh "" "$extra")"
+  um="$(rodar update.sh --skip-backup "$extra")"
+  dois="$(rodar update.sh --skip-backup "$extra")"
 
   # CONTROLE POSITIVO: sem chegar ao fim, a ausência do aviso não mede nada.
   if ! printf '%s' "$um" | grep -q 'Atualização concluída'; then
@@ -2402,7 +2472,7 @@ echo "DDL: nenhum script do kit manda a string do APP para o Postgres"
 # `--exclude` para não casar as próprias frases deste arquivo — que fala do
 # defeito para explicá-lo, e ficaria eternamente vermelho por citar o que vigia.
 sobrando="$(grep -nE --exclude='test-validators.sh' '(psql|pg_dump) "\$SUPABASE_DB_URL"' ./*.sh 2>/dev/null || true)"
-convertidos="$(grep -hoE --exclude='test-validators.sh' '(psql|pg_dump) "\$\(url_do_schema\)"' ./*.sh 2>/dev/null | grep -c . || true)"
+convertidos="$(grep -hoE --exclude='test-validators.sh' 'pg_container "\$\(url_do_schema\)"' ./*.sh 2>/dev/null | grep -c . || true)"
 if [ -n "$sobrando" ]; then
   printf '  ✗ script do kit ainda manda a string do app para o Postgres:\n'
   printf '%s\n' "$sobrando" | sed 's/^/       /'
@@ -2437,6 +2507,9 @@ case "$1" in
 esac
 exit 0
 STUB
+  mkdir -p "$VPS_PROJ/supabase/migrations"
+  : > "$VPS_PROJ/supabase/baseline.sql"
+  printf '# Synthetic migration manifest\n' > "$VPS_PROJ/supabase/migrations/MANIFEST.md"
   # O update.sh decide o que instalar por TAG: sem repositório com versão
   # publicada ele para antes de chegar ao `up -d`, e o teste passaria vazio.
   (cd "$VPS_PROJ" && git init -q -b main . \
@@ -2611,6 +2684,10 @@ printf '%s\n' "$*" >> "$DOCKER_LOG"
 case "$1" in
   compose) case "$*" in *" exec "*) printf 'healthy\n{"data":{"status":"healthy"}}\n' ;; esac; exit 0 ;;
 esac
+case "$*" in
+  *"select 1 from information_schema.tables"*) printf '0\n'; exit 0 ;;
+  *"select count(*) from information_schema.tables"*) printf '50\n'; exit 0 ;;
+esac
 exit 0
 STUB
   mkdir -p "$VPS_PROJ/supabase"; : > "$VPS_PROJ/supabase/baseline.sql"
@@ -2621,7 +2698,10 @@ STUB
   # CONTROLE POSITIVO: se a instalação nem chegou ao fim, a ausência do bloco
   # abaixo não significa nada — seria sonda cega lida como aprovação.
   if ! printf '%s' "$saida" | grep -q "Instalação concluída"; then
-    printf '  ✗ a instalação não chegou à tela final — cenário inconclusivo, não verde\n'; exit 1
+    printf '  ✗ a instalação não chegou à tela final — cenário inconclusivo, não verde\n'
+    printf '     saída final sanitizada:\n'
+    printf '%s\n' "$saida" | sed -E 's#postgres(ql)?://[^[:space:]]+#<connection-string>#g' | tail -12 | sed 's/^/       /'
+    exit 1
   fi
 
   # ⚠ A MEDIÇÃO É SOBRE O QUE VEM DEPOIS DA TELA FINAL, e isso não é detalhe.
