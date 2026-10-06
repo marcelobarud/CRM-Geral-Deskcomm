@@ -42,3 +42,15 @@ Execute `./scripts/supabase/start-geral-1.ps1 -Prompt -Suite Automations -Mode A
 ## Bloco H: campanhas agendadas
 
 Execute `./scripts/supabase/start-geral-1.ps1 -Prompt -Suite Campaigns -Mode AgentLoop`. Informe as duas chaves apenas nos campos ocultos e mantenha o terminal aberto durante a homologação. A suíte usa organizações, contatos e campanhas fictícias; confere RLS A/B, papéis, MFA, snapshot, consentimento, lote, cancelamento e capability. Nenhuma chamada a provider é feita e nenhum destinatário recebe mensagem. Os relatórios sanitizados e capturas ficam em `.local-dev/bloco-h/`, ignorado pelo Git. A execução não comprova instalação/update limpa, que depende do teste de distribuição com Docker.
+
+## Sessão master sem prazo
+
+Para manter uma sessão autenticada aberta enquanto houver trabalho de homologação, execute:
+
+```powershell
+.\scripts\supabase\start-geral-1.ps1 -Prompt -Mode MasterLoop
+```
+
+As chaves são solicitadas uma vez em campos ocultos. O PowerShell conserva os valores apenas na memória e os injeta no processo de teste somente durante cada execução; enquanto aguarda, as variáveis de ambiente com as chaves ficam vazias. A sessão não expira por tempo: encerre com `Ctrl+C` ou feche o terminal. Os requests e o status sem credenciais ficam em `.local-dev/master-loop/`, ignorado pelo Git.
+
+O agente pode solicitar uma suíte fixa (`D2`, `Commercial`, `Tags`, `B2B`, `Forecast`, `Proposals`, `Automations` ou `Campaigns`) ou `All`, que executa essa lista em sequência e para na primeira falha. Uma execução por request evita comandos arbitrários; o identificador da sessão impede que requests antigos sejam aceitos. Cada suíte mantém seus próprios limites para timeouts de navegador e rede, mesmo que a sessão master continue aberta.
