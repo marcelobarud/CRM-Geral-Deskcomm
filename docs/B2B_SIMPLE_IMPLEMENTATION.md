@@ -185,9 +185,7 @@ Tentativa real B2B de 2026-10-03: Auth/REST/Storage/Realtime e a bateria JWT
 B2B de isolamento/permissões passaram. A jornada parou por browser_timeout
 no bloco de contato/vínculo, antes de confirmar a tela; fixtures_cleaned=true.
 Não representa homologação completa. O harness agora distingue seletor,
-envio por teclado, resposta HTTP e exibição do vínculo, e captura somente
-a tela fictícia em b2b-failure.png quando houver falha. Nenhuma mudança
-funcional foi feita por hipótese; próxima execução deve localizar a causa.
+envio por teclado, resposta HTTP e exibição do vínculo, e captura a tela fictícia de falha somente em diretório local ignorado. Nenhuma mudança funcional foi feita por hipótese; próxima execução deve localizar a causa.
 
 Segunda tentativa: timeout no seletor de empresa; fixtures_cleaned=true.
 A captura confirmou que o campo estava presente. Reprodução isolada no Chrome
@@ -217,8 +215,8 @@ JWT A/B, viewer/agent/admin/anon/service, documento/homônimos e cross-tenant
 passaram. A jornada real empresa → contato → oportunidade/Inbox → edição →
 troca/remoção → histórico → arquivo seguro passou em desktop/mobile e teclado.
 MFA real AAL1 bloqueou catálogo/vínculo e AAL2 permitiu ambos, com logout/login.
-Relatório e evidências fictícias permanecem ignorados em `.local-dev/bloco-d/`;
-`b2b-failure.png` pertence à tentativa anterior e não é evidência desta execução.
+Relatório e evidências fictícias permanecem ignorados no diretório local de testes.
+A captura da tentativa anterior não é evidência desta execução.
 Inspeção visual confirmou vínculo desktop, ficha mobile e histórico de remoção;
 o harness mediu ausência de overflow nas capturas de jornada.
 Consulta independente, limitada aos IDs do journal desta execução, confirmou
