@@ -94,6 +94,28 @@ function propsLigadasNoProduto(): Set<string> {
   return ligadas;
 }
 
+/** Encontra o `>` que fecha a abertura JSX sem truncar expressões como `() =>`. */
+function aberturaDoBotao(fonte: string, inicio: number): string | null {
+  let profundidade = 0;
+  let aspas: "'" | '"' | "`" | null = null;
+  for (let i = inicio; i < fonte.length; i++) {
+    const char = fonte[i]!;
+    if (aspas) {
+      if (char === "\\") i++;
+      else if (char === aspas) aspas = null;
+      continue;
+    }
+    if (char === "'" || char === '"' || char === "`") {
+      aspas = char;
+      continue;
+    }
+    if (char === "{") profundidade++;
+    else if (char === "}") profundidade--;
+    else if (char === ">" && profundidade === 0) return fonte.slice(inicio, i + 1);
+  }
+  return null;
+}
+
 /**
  * Um `<Button>` é MUDO quando nada lhe dá comportamento.
  *
@@ -119,10 +141,12 @@ function botoesMudos(): Array<{ onde: string }> {
     const fonte = fs.readFileSync(arquivo, "utf8");
     const linhas = fonte.split("\n");
     const rel = path.relative(RAIZ, arquivo);
-    for (const m of fonte.matchAll(/<Button\b(?:[^>]|\n)*?>/g)) {
+    for (const m of fonte.matchAll(/<Button\b/g)) {
       const n = fonte.slice(0, m.index ?? 0).split("\n").length;
+      const tag = aberturaDoBotao(fonte, m.index ?? 0);
+      if (!tag) continue;
       const anterior = linhas.slice(Math.max(0, n - 3), n - 1).join("\n");
-      if (ehMudo(m[0], anterior)) out.push({ onde: `${rel}:${n}` });
+      if (ehMudo(tag, anterior)) out.push({ onde: `${rel}:${n}` });
     }
   }
   return out;
@@ -184,6 +208,9 @@ describe("nenhum botão fica cinza por falta de fiação", () => {
     // E o gatilho que dá o comportamento mora no PAI (`<DropdownMenuTrigger
     // asChild>`), não nos atributos do próprio botão.
     expect(ehMudo('<Button size="sm">Mover…</Button>', "<DropdownMenuTrigger asChild>")).toBe(false);
+    const arrow = aberturaDoBotao('<Button onClick={() => setOpen(true)}>', 0);
+    expect(arrow).toContain("onClick={() => setOpen(true)}");
+    expect(ehMudo(arrow ?? "", "")).toBe(false);
   });
 
   it("toda callback que apaga um botão é passada por alguma tela do produto", () => {
