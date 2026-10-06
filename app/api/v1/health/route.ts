@@ -296,6 +296,8 @@ export async function GET(req: NextRequest) {
         // um campo ausente — ele desliga a pergunta em vez de deixá-la aberta.
         // Por isso o fallback agora é "desconhecido", e não um número plausível.
         version: process.env.APP_VERSION || "desconhecido",
+        revision: process.env.GIT_COMMIT || "desconhecido",
+        schema_version: process.env.SCHEMA_VERSION || "desconhecido",
         timestamp: new Date().toISOString(),
         checks,
       },

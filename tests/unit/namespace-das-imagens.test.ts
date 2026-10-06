@@ -53,7 +53,7 @@ const PUBLICA = fs.readFileSync(path.join(RAIZ, ".github/workflows/publish-image
 const ENV_EXEMPLO = fs.readFileSync(path.join(RAIZ, ".env.hostgator.example"), "utf8");
 
 /** O valor literal que este repositório publica. A âncora. */
-const NAMESPACE_DESTE_REPO = "ghcr.io/melgarafael";
+const NAMESPACE_DESTE_REPO = "ghcr.io/marcelobarud";
 
 /**
  * Um fork que publica as próprias imagens muda `IMG_NS` — e precisa mudar junto
@@ -160,12 +160,15 @@ describe("o default do compose diz o mesmo que o kit", () => {
 
 describe("o kit aponta para o que o CI realmente publica", () => {
   it("os defaults de código e os labels de origem apontam para este repositório", () => {
-    const repo = "https://github.com/melgarafael/DeskcommCRM";
+    const repo = "https://github.com/marcelobarud/CRM-Geral-Deskcomm";
     for (const script of ["install.sh", "comecar.sh"]) {
       const texto = fs.readFileSync(path.join(RAIZ, "hostgator-setup-kit", script), "utf8");
-      expect(texto).toContain(`REPO_URL="\${REPO_URL:-${repo}.git}"`);
+      expect(texto).toContain(`REPO_URL="\${REPO_URL:-\${CRM_GERAL_REPO_URL:-${repo}.git}}"`);
     }
-    expect(COMUM).toContain(`local url="\${1:-${repo}.git}" ref`);
+    expect(COMUM).toContain(`local url="\${1:-\${CRM_GERAL_REPO_URL:-${repo}.git}}" ref`);
+    const update = fs.readFileSync(path.join(RAIZ, "hostgator-setup-kit/update.sh"), "utf8");
+    expect(update).toContain("normalizar_repo_git");
+    expect(update).toContain("CRM_GERAL_REPO_URL explicitamente");
     for (const dockerfile of ["Dockerfile", "Dockerfile.worker", "Dockerfile.scheduler"]) {
       expect(fs.readFileSync(path.join(RAIZ, dockerfile), "utf8")).toContain(
         `org.opencontainers.image.source="${repo}"`,
@@ -257,80 +260,55 @@ describe("catraca: ninguém mais repete o namespace", () => {
   ]);
 
   /**
-   * Varre o DISCO (`grep -r`), não o índice do git: arquivo novo ainda
-   * untracked é justamente o que um gate por `git ls-files` não enxerga.
+   * Varre fontes rastreadas e arquivos novos não ignorados. Isso inclui untracked
+   * durante desenvolvimento sem percorrer node_modules, .next, artefatos ou
+   * arquivos privados ignorados como .env. A lista vem do próprio Git e a leitura
+   * é feita em Node, sem depender de grep/bash disponíveis no PATH do Windows.
    *
-   * `grep -r` (minúsculo) não desce por symlink de diretório — o que mantém
-   * `node_modules` de worktree fora do caminho mesmo quando ele é um link.
-   *
-   * A primeira versão fazia isto com `readdirSync` recursivo + `readFileSync`:
-   * levava 8s numa rodada e ESTOUROU o timeout de 15s na seguinte, na mesma
-   * máquina. Um gate que reprova por lentidão não distingue defeito de disco
-   * ocupado — e o conserto para o qual ele empurra é aumentar o timeout.
-   *
-   * De fora ficam artefato e PROSA: documentação cita o namespace de propósito
+   * De fora ficam documentação e artefatos: a prosa cita o namespace de propósito
    * (ADR, CHANGELOG, runbooks) e não monta string em runtime. A catraca vale
-   * para o que executa.
+   * para arquivos executáveis/configuração do produto.
    */
   function reincidentes(): string[] {
-    const excluiDir = [
+    const saida = execFileSync(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+      { cwd: RAIZ, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+    );
+    const dirsDeArtefatos = new Set([
+      ".claude",
       ".git",
-      "node_modules",
+      ".local-dev",
       ".next",
-      "docs",
       "coverage",
+      "docs",
+      "evidence",
+      "node_modules",
       "playwright-report",
       "test-results",
-      ".superpowers",
-      // Prova visual (PNG, trace) e worktrees aninhados — 42 MB e 4,8 s de
-      // varredura entre os dois, medido. Nenhum dos dois monta referência de
-      // imagem: `evidence/` é artefato de QA e `.claude/worktrees/` são OUTRAS
-      // árvores do repo, com o gate delas próprio.
-      "evidence",
-      ".claude",
-    ].map((d) => `--exclude-dir=${d}`);
-    // `.bak`/`.orig`/`.rej`/`~` são sobra de editor e de `sed -i.bak`. Sem isto,
-    // uma sabotagem local deixa o gate vermelho pelo motivo errado.
-    const excluiArq = ["*.md", "*.bak", "*.orig", "*.rej", "*~"].map((g) => `--exclude=${g}`);
-
-    let saida = "";
-    try {
-      saida = execFileSync(
-        "grep",
-        ["-rlF", NAMESPACE_DESTE_REPO, ".", ...excluiDir, ...excluiArq],
-        { cwd: RAIZ, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
-      );
-    } catch (e) {
-      // grep sai 1 quando não casa nada — que aqui é o resultado bom. Qualquer
-      // outro código é o INSTRUMENTO quebrado, e ele precisa gritar: um catch
-      // que devolvesse [] daria verde com a varredura morta.
-      const err = e as { status?: number; stderr?: string };
-      if (err.status !== 1) {
-        throw new Error(`a varredura do namespace não rodou (grep saiu ${err.status}): ${err.stderr ?? ""}`);
-      }
-    }
+    ]);
+    const fonte = /\.(?:cjs|css|html|js|json|mjs|sh|sql|toml|ts|tsx|yaml|yml)$/i;
     return saida
-      .split("\n")
+      .split("\0")
       .filter(Boolean)
-      .map((l) => l.replace(/^\.\//, ""))
+      .filter((rel) => !rel.split("/").some((parte) => dirsDeArtefatos.has(parte)))
+      .filter((rel) => fonte.test(rel) || path.basename(rel).startsWith("Dockerfile") || rel === ".env.hostgator.example")
       .filter((rel) => !PERMITIDO.has(rel))
+      .filter((rel) => fs.readFileSync(path.join(RAIZ, rel), "utf8").includes(NAMESPACE_DESTE_REPO))
       .sort();
   }
 
   it("a varredura enxerga o literal onde ele está — senão o silêncio não vale nada", () => {
-    // O controle do instrumento. Sem ele, um `grep` que devolvesse vazio por
-    // qualquer motivo (flag errada, cwd errado) leria como "ninguém repete".
+    // O controle do instrumento. Sem ele, uma lista de arquivos vazia por
+    // qualquer motivo (git ausente, cwd errado) leria como "ninguém repete".
     //
     // O alvo é ESTE arquivo, e não o compose: um fork que renomeia o namespace
     // de forma coerente muda o compose junto, e o controle apontado para lá
     // ficaria vermelho por tabela — dois vermelhos onde o desenho promete um.
     // Aqui o literal existe por construção, em `NAMESPACE_DESTE_REPO`.
     const alvo = "tests/unit/namespace-das-imagens.test.ts";
-    const saida = execFileSync("grep", ["-rlF", NAMESPACE_DESTE_REPO, alvo], {
-      cwd: RAIZ,
-      encoding: "utf8",
-    });
-    expect(saida.trim()).toBe(alvo);
+    const conteudo = fs.readFileSync(path.join(RAIZ, alvo), "utf8");
+    expect(conteudo.includes(NAMESPACE_DESTE_REPO)).toBe(true);
   });
 
   it("o literal do namespace só aparece nos arquivos permitidos", () => {

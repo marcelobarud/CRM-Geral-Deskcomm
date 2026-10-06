@@ -110,13 +110,13 @@ jobs:
         include:
           - name: deskcommcrm
             dockerfile: Dockerfile
-            title: DeskcommCRM
+            title: CRM Geral
           - name: deskcomm-worker
             dockerfile: Dockerfile.worker
-            title: DeskcommCRM worker
+            title: CRM Geral worker
           - name: deskcomm-scheduler
             dockerfile: Dockerfile.scheduler
-            title: DeskcommCRM scheduler
+            title: CRM Geral scheduler
 
     steps:
       - uses: actions/checkout@v7
@@ -132,7 +132,7 @@ jobs:
       # A versão que a imagem vai reportar em /api/v1/health. Numa tag v1.2.3 é
       # "1.2.3"; fora de tag, o SHA curto — que ainda responde "o que está
       # rodando aqui?", que é a pergunta que o campo existe para responder.
-      - name: Resolver APP_VERSION
+      - name: Resolver metadados de release
         id: ver
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
@@ -140,6 +140,11 @@ jobs:
           else
             echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
+          schema=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
+            | sed -nE 's/^[0-9]+_([0-9]{4})_.*/\1/p' | sort -n | tail -1)
+          test -n "$schema"
+          echo "schema=${schema}" >> "$GITHUB_OUTPUT"
+          echo "commit=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Docker metadata (tags/labels)
         id: meta
@@ -199,6 +204,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             APP_VERSION=${{ steps.ver.outputs.value }}
+            GIT_COMMIT=${{ steps.ver.outputs.commit }}
+            SCHEMA_VERSION=${{ steps.ver.outputs.schema }}
           # Cache por imagem: as três têm camadas diferentes e um escopo único
           # faria uma sobrescrever o cache da outra a cada run.
           cache-from: type=gha,scope=${{ matrix.name }}
@@ -239,6 +246,8 @@ jobs:
           tags: deskcomm-smoke:pr
           build-args: |
             APP_VERSION=smoke
+            GIT_COMMIT=${{ github.sha }}
+            SCHEMA_VERSION=smoke
           # Mesmo escopo de cache do build-and-push: as camadas são idênticas,
           # então na prática este job reaproveita aquele build em vez de repeti-lo.
           cache-from: type=gha,scope=deskcommcrm

@@ -1,6 +1,6 @@
 # Doutrina de Packaging e Distribuição
 
-> Lei de arquitetura para tudo que roda no disco de quem instalou o DeskcommCRM: imagens,
+> Lei de arquitetura para tudo que roda no disco de quem instalou o CRM Geral: imagens,
 > composes, tags e o kit de instalação. Complementa [`sistema-vivo.md`](./sistema-vivo.md) —
 > não é aspiração, é critério de aceite. Amarrada ao item 15 do Definition of Done
 > (`CLAUDE.md`).
@@ -15,7 +15,7 @@ Ao mudar um invariante aqui, atualize os dois na mesma sessão.
 | saber se sua mudança precisa virar imagem publicada | §Os 8 invariantes, nº 1 |
 | escolher a tag que uma instalação de cliente consome | §Política de canais |
 | lançar uma versão | §Checklist de release |
-| entender por que o namespace é `melgarafael` e não uma org | o ADR |
+| entender o histórico do namespace anterior ao fork | o ADR e as decisões abaixo |
 
 ---
 
@@ -73,7 +73,7 @@ worker:
 
 # CERTO — imagem publicada; o build fica ao lado, como escape
 worker:
-  image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:stable}
+  image: ${WORKER_IMAGE:-ghcr.io/marcelobarud/deskcomm-worker:stable}
   build: { context: ., dockerfile: Dockerfile.worker }
 ```
 
@@ -104,7 +104,7 @@ OCI — no mínimo `source`, `revision`, `version`, `licenses` — e é constru�
   das três imagens não constrói. Ele existe porque a matriz gera um nome de check por imagem,
   e exigir os três pelo nome faria uma quarta imagem, um dia, escapar do gate em silêncio.
 
-  > **Ativado.** `imagens-ok` **é** required check da `main`. Medido em 2026-08-14:
+  > **Histórico do upstream.** `imagens-ok` apareceu entre os required checks medidos no repositório DeskcommCRM upstream em 2026-08-14:
   >
   > ```console
   > $ gh api repos/melgarafael/DeskcommCRM/branches/main/protection \
@@ -112,7 +112,17 @@ OCI — no mínimo `source`, `revision`, `version`, `licenses` — e é constru�
   > verify, build-and-size, invariants, e2e, imagens-ok
   > ```
   >
-  > Este parágrafo já disse as duas coisas erradas, em ordem: primeiro afirmou no presente
+  > Esta medição não comprova a proteção do fork CRM Geral. Na reavaliação de 2026-10-06,
+  > a API do fork respondeu `Branch not protected` (404); logo, `imagens-ok` não está imposto
+  > como requisito de merge na `main` do fork. Essa configuração é externa ao repositório.
+  > Confira de novo no fork com:
+  >
+  > ```console
+  > $ gh api repos/marcelobarud/CRM-Geral-Deskcomm/branches/main/protection \
+  >     --jq '.required_status_checks.contexts|join(", ")'
+  > ```
+  >
+  > O parágrafo original já disse as duas coisas erradas, em ordem: primeiro afirmou no presente
   > que o check era obrigatório quando não era, depois — corrigido — afirmou que "ainda não
   > está" e **continuou afirmando isso depois da ativação**, que aconteceu no mesmo dia. O
   > segundo erro é o mais instrutivo: o texto foi escrito *sabendo* que a ativação era o
@@ -227,8 +237,8 @@ default que preserva o comportamento anterior**; se ela precisa existir, quem a 
 
 `GET /api/v1/health` responde a versão real da imagem em execução.
 
-> **Vale a partir da próxima release.** Nenhuma imagem já publicada carrega
-> `APP_VERSION` — medido: `docker run --rm ghcr.io/melgarafael/deskcommcrm:1.2.1 node -e
+> **Vale a partir da próxima release do fork.** Imagens anteriores à Fase I.1 podem não carregar
+> `APP_VERSION` — medido no artefato upstream histórico: `docker run --rm ghcr.io/melgarafael/deskcommcrm:1.2.1 node -e
 > 'console.log(process.env.APP_VERSION)'` → `undefined`. Todo o parque instalado hoje
 > responde `desconhecido`, que é a resposta honesta e o motivo de o fallback não ser mais
 > um número plausível. O item 9 do checklist de release reprova contra a 1.2.1 de propósito.
@@ -379,11 +389,11 @@ pelo item 3. Um gate que aprova por erro de autenticação é pior que gate nenh
 # Cole no shell antes de começar. Funciona anonimamente (o pacote é público).
 ghcr_status() {   # $1=imagem  $2=tag  → 200 existe | 404 não existe | 403 pacote privado
   local t
-  t=$(curl -s "https://ghcr.io/token?scope=repository:melgarafael/$1:pull&service=ghcr.io" \
+  t=$(curl -s "https://ghcr.io/token?scope=repository:marcelobarud/$1:pull&service=ghcr.io" \
       | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
   curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $t" \
     -H 'Accept: application/vnd.oci.image.index.v1+json' \
-    "https://ghcr.io/v2/melgarafael/$1/manifests/$2"
+    "https://ghcr.io/v2/marcelobarud/$1/manifests/$2"
 }
 ```
 
@@ -410,14 +420,14 @@ do banco. É o passo que mais trava na estreia de uma imagem nova.
          echo "$i: $(ghcr_status $i X.Y.Z)"; done      → 200 nas três
        403 em alguma? Torne o pacote público ANTES de seguir
 [ ] 8. A imagem reporta a versão certa:
-       docker run --rm ghcr.io/melgarafael/deskcommcrm:X.Y.Z \
+       docker run --rm ghcr.io/marcelobarud/deskcommcrm:X.Y.Z \
          node -e 'console.log(process.env.APP_VERSION)'   → X.Y.Z
 [ ] 9. `gh release create vX.Y.Z` com as notas do CHANGELOG
 [ ] 10. SÓ AGORA: `stable` e X.Y.Z são o MESMO digest, nas três imagens:
         for i in deskcommcrm deskcomm-worker deskcomm-scheduler; do
           for t in X.Y.Z stable; do
             echo -n "$i:$t "; docker buildx imagetools inspect \
-              ghcr.io/melgarafael/$i:$t --format '{{.Manifest.Digest}}'; done; done
+              ghcr.io/marcelobarud/$i:$t --format '{{.Manifest.Digest}}'; done; done
         → o par de cada imagem tem que bater
         Não bateu? Alguma coisa republicou depois do push da tag. NÃO siga:
         um canal apontando para build diferente da versão é o invariante 3
@@ -462,7 +472,7 @@ parque instalado** percorre, e é o único que a suíte de CI não exercita.
 
 | Camada | Artefato | Garante |
 |---|---|---|
-| CI (mecânico) | `imagens-ok` em `publish-image.yml` | imagem quebrada **reprova o merge** — é required check da `main`. Meça antes de confiar: `gh api repos/melgarafael/DeskcommCRM/branches/main/protection --jq '.required_status_checks.contexts'` |
+| CI (mecânico) | `imagens-ok` em `publish-image.yml` | imagem quebrada reprova o workflow; a exigência de branch protection precisa ser conferida no fork: `gh api repos/marcelobarud/CRM-Geral-Deskcomm/branches/main/protection --jq '.required_status_checks.contexts'` |
 | CI (mecânico) | `tests/unit/packaging-artefato-do-cliente.test.ts` | serviço `build:`-only, pin upstream solto, `pull_policy` trocado e versão que mente reprovam |
 | CI (mecânico) | `tests/shell/update-guard.test.sh` | atualização que não pina as três imagens reprova |
 | CI (mecânico) | `hostgator-setup-kit/test-validators.sh` | instalação que nasce em tag móvel reprova |
@@ -481,6 +491,13 @@ desvinculada do repo. A premissa era falsa: o compose sempre apontou para
 todo cliente instalado. A string `deskcommcrm/deskcommcrm` existia num único lugar — uma URL
 de `git clone` em `docs/deploy-selfhost/README.md`, que retornava 404. O conserto proporcional
 ao defeito foi essa linha. Racional completo no ADR.
+
+**Atualização do fork CRM Geral — 2026-10-06:** os defaults operacionais do kit, compose,
+template `.env`, fontes OCI e workflow apontam para `marcelobarud/CRM-Geral-Deskcomm` e
+`ghcr.io/marcelobarud`. Esta correção local não prova publicação de uma release comercial:
+no fork não há release/tag `stable`, e o workflow de release falhou pela ausência dos segredos
+`RELEASE_APP_ID` e `RELEASE_APP_PRIVATE_KEY`. Não instalar em cliente até o primeiro conjunto
+de imagens versionadas e `stable` estar publicado e verificado.
 
 **2026-08-13 — a régua de RAM é de operação, não de build.** A mesma consultoria argumentou
 que publicar a imagem derrubaria o requisito de 4 GB para 2 GB. Os 4 GB nunca foram custo de

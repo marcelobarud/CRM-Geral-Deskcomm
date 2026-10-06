@@ -23,6 +23,10 @@
 #      e o fallback de "nenhuma tag conhecida + fetch falhou") — casos 8 e 9
 #      isolam cada uma, provado por sabotagem cirúrgica de cada linha.
 set -uo pipefail
+# O ambiente do desenvolvedor pode definir REPO_URL como override global. Cada
+# fixture fornece CRM_GERAL_REPO_URL próprio, então retire só essa variável do
+# subprocesso de teste para que ela não tenha precedência sobre a fixture.
+unset REPO_URL
 
 # O namespace das imagens publicadas, lido da FONTE (hostgator-setup-kit/_common.sh)
 # em vez de repetido aqui. Este arquivo tinha o literal em 29 lugares — fixtures e
@@ -148,6 +152,7 @@ BACKUP_MARK="$WORK/backup-rodou"
 cat > "$PROJ/hostgator-setup-kit/backup.sh" <<STUB
 #!/usr/bin/env bash
 touch "$BACKUP_MARK"
+[ "\${BACKUP_FAIL:-0}" != "1" ] || exit 17
 STUB
 # shellcheck disable=SC2016  # o ${APP_IMAGE} é literal DENTRO do compose
 printf 'services:\n  app:\n    image: \${APP_IMAGE:-x}\n' > "$PROJ/docker-compose.prod.yml"
@@ -168,15 +173,27 @@ git config user.email t@t.t; git config user.name t
 git add -A
 git commit --quiet -m "v0.9.0"
 git tag v0.9.0
+# The update guard requires an explicit, matching fork origin. Fixtures use
+# their own local repo as that fork; production defaults remain the CRM Geral fork.
+git remote add origin "$PROJ"
 # Instalação que SEGUE A MAIN: HEAD à frente da última tag publicada.
 echo topo > topo.txt; git add -A; git commit --quiet -m "topo da main"
 
 OUTFILE="$WORK/saida.txt"
 run_update() {  # run_update <args...> → saída em $OUTFILE, status em $RC
   rm -f "$BACKUP_MARK"
-  bash hostgator-setup-kit/update.sh "$@" > "$OUTFILE" 2>&1
+  CRM_GERAL_REPO_URL="$(git config --get remote.origin.url)" bash hostgator-setup-kit/update.sh "$@" > "$OUTFILE" 2>&1
   RC=$?
 }
+
+echo "── 0. Configuração divergente do fork é recusada antes do backup"
+rm -f "$BACKUP_MARK"
+CRM_GERAL_REPO_URL="https://github.com/another-owner/other-repo.git" bash hostgator-setup-kit/update.sh > "$OUTFILE" 2>&1
+RC=$?
+check "aborta com status != 0" test "$RC" -ne 0
+check "classifica divergência de origin como recusa sem mutação" test "$RC" -eq 3
+check "explica a divergência do origin" grep -q "origin não corresponde" "$OUTFILE"
+check "não chegou a rodar o backup" test ! -f "$BACKUP_MARK"
 
 echo "── 1. Alvo anterior ao instalado é recusado antes do backup"
 run_update --to v0.9.0
@@ -196,6 +213,15 @@ echo "── 3. --force é a saída explícita de quem quer mesmo voltar"
 run_update --to v0.9.0 --force
 check "passou da guarda e rodou o backup" test -f "$BACKUP_MARK"
 
+echo "── 3b. Falha no backup interrompe a atualização antes de tocar no código"
+HEAD_ANTES="$(git rev-parse HEAD)"
+rm -f "$BACKUP_MARK"
+BACKUP_FAIL=1 CRM_GERAL_REPO_URL="$(git config --get remote.origin.url)" bash hostgator-setup-kit/update.sh --to v0.9.0 --force > "$OUTFILE" 2>&1
+RC=$?
+check "backup falhou e update terminou diferente de zero" test "$RC" -ne 0
+check "HEAD não mudou depois da falha do backup" test "$(git rev-parse HEAD)" = "$HEAD_ANTES"
+check "explicou que o update parou" grep -q "O backup falhou" "$OUTFILE"
+
 echo "── 4. Atualização de verdade grava a imagem no .env, sem duplicar a chave"
 # Estado de quem sofreu um rollback antes: o agente deixou a imagem apontando
 # para um ID local e a política em "missing" (ID não se puxa do registro).
@@ -214,7 +240,10 @@ check "as outras chaves do .env sobreviveram" grep -q '^INTERNAL_SECRET=segredo$
 check "a política de pull vira 'missing' — a tag é imutável, e 'always' derrubaria o CRM se o GHCR caísse" \
   grep -q '^APP_PULL_POLICY=missing$' .env
 check "e sem duplicar a chave" test "$(grep -c '^APP_PULL_POLICY=' .env)" -eq 1
-check ".env continua 600 (só o dono lê)" test -n "$(find .env -perm 600)"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) printf '  ↷ modo POSIX 600 não é representável pelo Git Bash/NTFS; verificação de permissões omitida neste host\n' ;;
+  *) check ".env continua 600 (só o dono lê)" test -n "$(find .env -perm 600)" ;;
+esac
 
 # Esta prova exigia 'always' até 2026-08-13, e o motivo escrito era real: um
 # rollback deixava 'missing' no .env com um ID de imagem LOCAL, e ninguém
@@ -262,6 +291,7 @@ printf '.env\n' > "$SRC/.gitignore"
 cd "$SRC" || exit 1
 git init --quiet; git config user.email t@t.t; git config user.name t
 git add -A; git commit --quiet -m "release antiga"; git tag v0.9.0
+git remote add origin "file://$SRC"
 echo topo > topo.txt; git add -A; git commit --quiet -m "main, depois da release"
 
 clona_raso() {  # clona_raso <destino> — igual ao install.sh: --depth 1
@@ -314,7 +344,7 @@ AGENTE="$WORK/agente"
 clona_raso "$AGENTE"
 cd "$AGENTE" || exit 1
 : > "$DOCKER_LOG"; : > "$CURL_LOG"; rm -f "$BACKUP_MARK"
-bash hostgator-setup-kit/agent.sh > "$WORK/agente.out" 2>&1
+CRM_GERAL_REPO_URL="$(git config --get remote.origin.url)" bash hostgator-setup-kit/agent.sh > "$WORK/agente.out" 2>&1
 check "o agente chegou a executar o update (o app de mentira pediu)" \
   grep -q '"kind":"run_progress"\|"kind":"run_result"' "$CURL_LOG"
 check "NÃO reiniciou o container" test -z "$(grep -F 'up -d app' "$DOCKER_LOG" || true)"

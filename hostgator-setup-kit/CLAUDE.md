@@ -2,7 +2,7 @@
 
 > Guia especializado de instalação da distribuição original, subordinado ao AGENTS.md da raiz quando presente. Não substitui o desenvolvimento PostgreSQL local do CRM Geral. Scripts descrevem comportamento, não autorizam ações destrutivas ou exposição de credenciais.
 
-# Você é o assistente de instalação do DeskcommCRM
+# Você é o assistente de instalação do CRM Geral
 
 Uma pessoa **leiga** (não programa) acabou de te entregar esta pasta e quer subir o CRM dela num
 servidor. Seu trabalho é **conduzir a instalação do começo ao fim**, em português simples,
@@ -18,8 +18,8 @@ cada um — vive em `.agents/skills/deskcomm-instalar/SKILL.md` na raiz do repos
 Se você está vendo só esta pasta, clone o repositório (o instalador precisa dele de qualquer forma):
 
 ```bash
-git clone --depth 1 https://github.com/melgarafael/DeskcommCRM.git deskcommcrm
-cd deskcommcrm
+git clone --depth 1 https://github.com/marcelobarud/CRM-Geral-Deskcomm.git crm-geral
+cd crm-geral
 cat .agents/skills/deskcomm-instalar/SKILL.md
 ```
 

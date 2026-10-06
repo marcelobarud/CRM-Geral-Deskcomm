@@ -216,7 +216,7 @@ describe("packaging — o artefato que o cliente instala", () => {
     ).toEqual([]);
   });
 
-  it("cada Dockerfile publicado declara procedência OCI e ARG APP_VERSION", () => {
+  it("cada Dockerfile identifica origem, versão, commit e estado do schema", () => {
     // O CI injeta os labels via docker/metadata-action, mas o build local do
     // docker-compose.build.yml não passa por ele. Sem LABEL no arquivo, essa
     // imagem sai sem origem nenhuma — e é justamente a que vira dívida numa VPS.
@@ -226,10 +226,14 @@ describe("packaging — o artefato que o cliente instala", () => {
         "org.opencontainers.image.source",
       );
       expect(conteudo, `${arquivo} sem ARG APP_VERSION`).toMatch(/^ARG APP_VERSION/m);
+      expect(conteudo, `${arquivo} sem ARG GIT_COMMIT`).toMatch(/^ARG GIT_COMMIT/m);
+      expect(conteudo, `${arquivo} sem ARG SCHEMA_VERSION`).toMatch(/^ARG SCHEMA_VERSION/m);
+      expect(conteudo).toContain("org.opencontainers.image.revision");
+      expect(conteudo).toContain("io.crm-geral.schema-version");
     }
   });
 
-  it("o workflow publica as três imagens e injeta APP_VERSION", () => {
+  it("o workflow publica as três imagens e injeta version, commit e schema iguais", () => {
     const wf = fs.readFileSync(path.join(RAIZ, ".github/workflows/publish-image.yml"), "utf8");
     for (const imagem of ["deskcommcrm", "deskcomm-worker", "deskcomm-scheduler"]) {
       expect(wf, `publish-image.yml não publica '${imagem}'`).toContain(`name: ${imagem}`);
@@ -237,6 +241,8 @@ describe("packaging — o artefato que o cliente instala", () => {
     expect(wf, "publish-image.yml não passa APP_VERSION como build-arg").toContain(
       "APP_VERSION=",
     );
+    expect(wf, "publish-image.yml não passa o commit do build").toContain("GIT_COMMIT=");
+    expect(wf, "publish-image.yml não deriva o schema atual").toContain("SCHEMA_VERSION=");
     // A sonda prende o EFEITO (o canal `stable` passa a existir), não a forma.
     // Ela já mudou uma vez: `stable` saiu da lista de tags da matriz — onde cada
     // imagem o movia sozinha — para o job `promover-stable`, que só roda com as
@@ -279,7 +285,7 @@ describe("packaging — o artefato que o cliente instala", () => {
 });
 
 describe("packaging — a versão que roda é observável de fora", () => {
-  it("o /api/v1/health lê APP_VERSION, e não npm_package_version", () => {
+  it("o /api/v1/health identifica versão, commit e schema do artefato", () => {
     // npm_package_version é `undefined` sob `CMD ["node","server.js"]` — só
     // existe quando o processo nasce de um `npm`/`pnpm run`. Com o fallback
     // "0.1.0" que havia antes, TODA instalação do mundo reportava a mesma
@@ -292,5 +298,7 @@ describe("packaging — a versão que roda é observável de fora", () => {
     expect(rota, "o health não lê process.env.APP_VERSION").toMatch(
       /version:\s*process\.env\.APP_VERSION/,
     );
+    expect(rota).toMatch(/revision:\s*process\.env\.GIT_COMMIT/);
+    expect(rota).toMatch(/schema_version:\s*process\.env\.SCHEMA_VERSION/);
   });
 });

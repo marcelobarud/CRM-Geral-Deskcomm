@@ -6,12 +6,19 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Procedência (doutrina de packaging, invariante 2).
-LABEL org.opencontainers.image.source="https://github.com/melgarafael/DeskcommCRM" \
+LABEL org.opencontainers.image.source="https://github.com/marcelobarud/CRM-Geral-Deskcomm" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="DeskcommCRM worker"
+      org.opencontainers.image.title="CRM Geral worker"
 
 ARG APP_VERSION=dev
-ENV APP_VERSION=$APP_VERSION
+ARG GIT_COMMIT=unknown
+ARG SCHEMA_VERSION=unknown
+LABEL org.opencontainers.image.version=$APP_VERSION \
+      org.opencontainers.image.revision=$GIT_COMMIT \
+      io.crm-geral.schema-version=$SCHEMA_VERSION
+ENV APP_VERSION=$APP_VERSION \
+    GIT_COMMIT=$GIT_COMMIT \
+    SCHEMA_VERSION=$SCHEMA_VERSION
 # pnpm fixado na versão do lockfile do repo (pnpm 10 bloquearia build scripts).
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 

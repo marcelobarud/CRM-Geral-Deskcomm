@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# DeskcommCRM — imagem de produção self-host (Next.js standalone).
+# CRM Geral — imagem de produção self-host (Next.js standalone).
 # Build: docker build --build-arg NEXT_PUBLIC_SUPABASE_URL=... -t deskcomm-app .
 
 # ---- deps: instala dependências (layer cacheável) ----
@@ -53,20 +53,27 @@ WORKDIR /app
 # OCI via docker/metadata-action; estes aqui são defesa em profundidade — valem
 # para qualquer build, inclusive o local de docker-compose.build.yml, que não
 # passa pelo metadata-action e sem isto sairia sem origem nenhuma.
-LABEL org.opencontainers.image.source="https://github.com/melgarafael/DeskcommCRM" \
+LABEL org.opencontainers.image.source="https://github.com/marcelobarud/CRM-Geral-Deskcomm" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="DeskcommCRM"
+      org.opencontainers.image.title="CRM Geral"
 
 # A versão que /api/v1/health reporta (invariante 7). Precisa vir por ARG: a
 # alternativa anterior era `process.env.npm_package_version`, que é `undefined`
 # sob `CMD ["node","server.js"]` — só existe quando o processo nasce de um
 # `npm`/`pnpm run`. Toda instalação do mundo reportava o fallback "0.1.0".
 ARG APP_VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG SCHEMA_VERSION=unknown
+LABEL org.opencontainers.image.version=$APP_VERSION \
+      org.opencontainers.image.revision=$GIT_COMMIT \
+      io.crm-geral.schema-version=$SCHEMA_VERSION
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
     NEXT_TELEMETRY_DISABLED=1 \
-    APP_VERSION=$APP_VERSION
+    APP_VERSION=$APP_VERSION \
+    GIT_COMMIT=$GIT_COMMIT \
+    SCHEMA_VERSION=$SCHEMA_VERSION
 # ffmpeg: a derivação de vídeo (Onda 3.1) roda no processo do app — o cron
 # event-log-drain executa o media_derive handler, que chama `ffmpeg` via spawn
 # pra extrair áudio+frames. Sem o binário, todo vídeo recebido falha a derivação.
@@ -78,6 +85,7 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
+COPY --from=build --chown=nextjs:nodejs /app/scripts/storage-archive.mjs ./scripts/storage-archive.mjs
 USER nextjs
 EXPOSE 3000
 # server.js é o entrypoint gerado pelo output standalone.

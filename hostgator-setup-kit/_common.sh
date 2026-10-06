@@ -417,10 +417,57 @@ url_do_schema() {
   printf '%s' "${SUPABASE_DB_ADMIN_URL:-${SUPABASE_DB_URL:?sem connection string de banco no .env — rode o install.sh}}"
 }
 
-# psql efêmero via container (não exige psql no host). Usa a conexão de schema:
-# os chamadores mexem em `auth.mfa_factors` e `private.app_secrets`, fora do
-# alcance de uma role de app com grants só em `public`.
-psql_run() { docker run --rm -i postgres:17-alpine psql "$(url_do_schema)" -v ON_ERROR_STOP=1 "$@"; }
+# Cliente Postgres efêmero. A URI passa pelo stdin para não aparecer nos
+# argumentos do processo Docker; no container, o parser a traduz para variáveis
+# libpq e executa somente o cliente/consulta solicitados. `--stdin` preserva o
+# restante do stdin depois da primeira linha, para dumps e SQL por pipe.
+pg_container() {
+  local connection="$1" consume_stdin=0
+  shift
+  [ "${1:-}" = "--stdin" ] && { consume_stdin=1; shift; }
+  local -a docker_args=()
+  while [ "${1:-}" != "--" ]; do
+    [ $# -gt 0 ] || die "pg_container requer -- antes do comando Postgres"
+    docker_args+=("$1")
+    shift
+  done
+  shift
+  local parse_uri='set -eu
+IFS= read -r uri || { echo "connection string ausente" >&2; exit 2; }
+case "$uri" in postgres://*|postgresql://*) ;; *) echo "connection string Postgres inválida" >&2; exit 2 ;; esac
+rest="${uri#*://}"
+authority="${rest%%/*}"
+database_query="${rest#*/}"
+userinfo="${authority%%@*}"
+hostport="${authority#*@}"
+if [ "$userinfo" = "$authority" ] || [ "$hostport" = "$authority" ]; then echo "connection string Postgres inválida" >&2; exit 2; fi
+raw_user="${userinfo%%:*}"
+raw_password="${userinfo#*:}"
+decode_uri() { printf "%b" "$(printf "%s" "$1" | sed "s/%/\\\\x/g")"; }
+PGUSER="$(decode_uri "$raw_user")"
+PGPASSWORD="$(decode_uri "$raw_password")"
+case "$hostport" in
+  *:*) PGHOST="${hostport%:*}"; PGPORT="${hostport##*:}" ;;
+  *) PGHOST="$hostport"; PGPORT=5432 ;;
+esac
+database_query="${database_query%%\?*}"
+PGDATABASE="$(decode_uri "$database_query")"
+query="${rest#*\?}"
+PGSSLMODE="$(printf "%s" "$query" | tr "&" "\\n" | sed -n "s/^sslmode=//p" | head -1)"
+PGSSLMODE="${PGSSLMODE:-require}"
+PGCONNECT_TIMEOUT=15
+export PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE PGSSLMODE PGCONNECT_TIMEOUT
+exec "$@"'
+  if [ "$consume_stdin" = 1 ]; then
+    { printf '%s\n' "$connection"; cat; } | docker run --rm -i "${docker_args[@]}" postgres:17-alpine sh -c "$parse_uri" crm-geral-pg "$@"
+  else
+    printf '%s\n' "$connection" | docker run --rm -i "${docker_args[@]}" postgres:17-alpine sh -c "$parse_uri" crm-geral-pg "$@"
+  fi
+}
+
+# `psql` usa a conexão de schema: os chamadores mexem em auth/private, fora do
+# alcance de uma role de app com grants só em public.
+psql_run() { pg_container "$(url_do_schema)" -- psql -v ON_ERROR_STOP=1 "$@"; }
 
 # ── As três imagens que NÓS publicamos ───────────────────────────────────────
 # O namespace é constante e literal de propósito: ele está gravado no .env de
@@ -433,7 +480,9 @@ psql_run() { docker run --rm -i postgres:17-alpine psql "$(url_do_schema)" -v ON
 # `docker-compose.prod.yml`, `.env.hostgator.example` e a matriz de
 # `publish-image.yml` digam o mesmo. Se você é um fork, é lá que está a lista do
 # que trocar junto.
-IMG_NS="ghcr.io/melgarafael"
+# Fork oficial do CRM Geral. O owner do registry acompanha o repo deste checkout;
+# mudar de distribuidor exige atualizar também os defaults do compose e do kit.
+IMG_NS="ghcr.io/marcelobarud"
 IMG_APP="${IMG_NS}/deskcommcrm"
 IMG_WORKER="${IMG_NS}/deskcomm-worker"
 IMG_SCHEDULER="${IMG_NS}/deskcomm-scheduler"
@@ -450,7 +499,7 @@ IMG_SCHEDULER="${IMG_NS}/deskcomm-scheduler"
 # alguém porque não deu para resolver um número de versão seria trocar um
 # problema de previsibilidade por um de disponibilidade.
 ultima_versao_publicada() {
-  local url="${1:-https://github.com/melgarafael/DeskcommCRM.git}" ref
+  local url="${1:-${CRM_GERAL_REPO_URL:-https://github.com/marcelobarud/CRM-Geral-Deskcomm.git}}" ref
   command -v git >/dev/null 2>&1 || return 0
   # `grep -v -- -` descarta PRERELEASE (v1.11.0-rc1, v1.1.1-jmpo.1 — esta última
   # existe de verdade neste repo). O `--sort=-v:refname` do git põe o prerelease
@@ -795,7 +844,7 @@ setup_event_log_drain_cron() {
   if crontab -l 2>/dev/null | grep -qF -e "$url_drain"; then first_time=0; fi
 
   local cron_line="* * * * * curl -fsS -H \"Authorization: Bearer ${secret}\" \"${url_drain}\" >/dev/null 2>&1 ${marcador}"
-  ( crontab -l 2>/dev/null | cron_merge "$marcador" "$url_drain" "$cron_line" ) | crontab -
+  { crontab -l 2>/dev/null || true; } | cron_merge "$marcador" "$url_drain" "$cron_line" | crontab -
   c_grn "✓ automações ativas (cron do event-log-drain, a cada minuto)"
 
   if [ "$first_time" = 1 ]; then
@@ -834,7 +883,7 @@ setup_update_agent_cron() {
   local legado="cd ${PROJECT_DIR} && bash hostgator-setup-kit/agent.sh"
   local marcador; marcador="$(cron_tag agent)"
   local cron_line="*/5 * * * * ${legado} >/dev/null 2>&1 ${marcador}"
-  ( crontab -l 2>/dev/null | cron_merge "$marcador" "$legado" "$cron_line" ) | crontab -
+  { crontab -l 2>/dev/null || true; } | cron_merge "$marcador" "$legado" "$cron_line" | crontab -
   c_grn "✓ atualização pela tela ativa (agente a cada 5 minutos)"
 }
 

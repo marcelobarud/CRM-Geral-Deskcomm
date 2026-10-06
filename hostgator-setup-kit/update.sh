@@ -26,6 +26,25 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# Uma instalação comercial deste fork só atualiza do mesmo repositório que a
+# instalou. Cópias antigas clonadas do upstream não podem buscar código ou tags
+# de lá por acidente. Mirrors podem ser selecionados explicitamente por
+# CRM_GERAL_REPO_URL/REPO_URL no ambiente da execução.
+normalizar_repo_git() {
+  local repo="${1%/}"
+  repo="${repo%.git}"
+  repo="${repo#https://github.com/}"
+  repo="${repo#http://github.com/}"
+  repo="${repo#ssh://git@github.com/}"
+  repo="${repo#git@github.com:}"
+  printf '%s' "${repo,,}"
+}
+ORIGIN_URL="$(git config --get remote.origin.url || true)"
+REPO_ESPERADO="${REPO_URL:-${CRM_GERAL_REPO_URL:-https://github.com/marcelobarud/CRM-Geral-Deskcomm.git}}"
+if [ -z "$ORIGIN_URL" ] || [ "$(normalizar_repo_git "$ORIGIN_URL")" != "$(normalizar_repo_git "$REPO_ESPERADO")" ]; then
+  refuse "Atualização interrompida: origin não corresponde ao repositório configurado do CRM Geral. Nenhum código, banco ou imagem foi alterado. Confira origin ou informe CRM_GERAL_REPO_URL explicitamente."
+fi
+
 # ── 0-. Esta cópia do repo é a dona dos contêineres? ─────────────────────────
 # Antes do cron e antes do git: uma segunda cópia que atualiza por cima recria o
 # parque com o .env DELA. Foi o que deixou o WhatsApp de uma VPS real três dias
@@ -61,7 +80,7 @@ image_desatualizada() {
   # um literal: num fork com namespace próprio, o literal apontava para a
   # imagem do UPSTREAM, e um `.env` sem APP_IMAGE comparava o digest local
   # contra um registry que não é o dele.
-  local img="${APP_IMAGE:-${IMG_APP}:latest}" local_d remote_d
+  local img="${APP_IMAGE:-${IMG_APP}:stable}" local_d remote_d
   local_d="$(docker image inspect "$img" --format '{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' 2>/dev/null | sed 's/.*@//')"
   [ -z "$local_d" ] && return 0                 # nem baixada ainda → atualizar
   remote_d="$(docker buildx imagetools inspect "$img" 2>/dev/null | awk '/^Digest:/{print $2; exit}')"
@@ -113,12 +132,12 @@ fi
 if [ -z "$SKIP_BACKUP" ]; then
   step "Backup de segurança (antes de mexer no banco)"
   if bash "$(dirname "$0")/backup.sh"; then
-    c_grn "✓ backup feito — se algo der errado, dá pra restaurar (restore.sh)."
+    c_grn "✓ pacote de backup criado e verificado; restore isolado ainda exige validação própria."
   else
-    c_ylw "⚠ o backup falhou. A atualização NÃO apaga dados (só reorganiza os contatos),"
-    c_ylw "  mas o ideal é ter backup. Ctrl+C pra parar e investigar; continuo em 8s…"
-    sleep 8
+    die "O backup falhou. A atualização foi interrompida antes de trocar código, banco ou imagens. Corrija BACKUP_DIR/Storage e tente novamente; --skip-backup só deve ser usado numa janela explicitamente autorizada."
   fi
+else
+  c_ylw "⚠ backup ignorado por --skip-backup; verifique que existe um pacote externo recente antes de continuar."
 fi
 # Avisa o agente do host (se for ele quem está dirigindo) — é o que faz a tela
 # de atualização avançar passo a passo enquanto o app ainda está de pé.
@@ -144,31 +163,30 @@ fi
 step "Atualizando o banco de dados"
 if [ -f supabase/baseline.sql ]; then
   # Extensões que o schema exige (idempotente; iguais ao install.sh).
-  docker run --rm postgres:17-alpine psql "$(url_do_schema)" -c \
+  pg_container "$(url_do_schema)" -- psql -c \
     "create extension if not exists vector with schema public; create extension if not exists citext with schema public; create extension if not exists pg_trgm with schema public;" \
-    >/dev/null 2>&1 || true
+    >/dev/null 2>&1 || die "Não foi possível habilitar as extensões do schema; atualização interrompida antes de aplicar a baseline."
 
-  raw="$(docker run --rm -i -v "$PROJECT_DIR/supabase/baseline.sql:/b.sql:ro" \
-        postgres:17-alpine psql "$(url_do_schema)" -f /b.sql 2>&1 || true)"
+  raw="$(pg_container "$(url_do_schema)" --mount "type=bind,source=$PROJECT_DIR/supabase/baseline.sql,target=/b.sql,readonly" \
+        -- psql -f /b.sql 2>&1 || true)"
 
   # Erros benignos ao re-aplicar sobre uma base existente:
   benign='already exists|multiple primary keys|multiple default values|is already a member|already a partition'
   unexpected="$(printf '%s\n' "$raw" | grep -iE 'ERROR|FATAL' | grep -viE "$benign" || true)"
 
   if [ -n "$unexpected" ]; then
-    c_ylw "⚠ Apareceram avisos no banco que NÃO são os esperados:"
+    c_red "✖ A aplicação da baseline encontrou erros inesperados; a atualização foi interrompida."
     printf '%s\n' "$unexpected" | head -20
-    c_ylw "  O app pode ainda funcionar. Se algo estiver errado, restaure o backup (restore.sh)."
     case "$unexpected" in
       *permission\ denied*|*must\ be\ owner*|*permissão\ negada*)
-        c_ylw "  Os erros são de PERMISSÃO: a conexão do .env não é o dono do banco. Num Supabase"
-        c_ylw "  próprio, declare SUPABASE_DB_ADMIN_URL no .env — é ela que roda o schema." ;;
+        c_ylw "  Verifique SUPABASE_DB_ADMIN_URL; a conexão precisa poder aplicar DDL." ;;
     esac
+    die "Schema não confirmado; não atualizei as imagens. Revise o erro e valide o banco antes de retomar."
   else
     c_grn "✓ banco atualizado (e conversas reorganizadas, se havia bagunça)."
   fi
 else
-  c_ylw "⚠ supabase/baseline.sql não encontrado — pulei a parte do banco."
+  die "supabase/baseline.sql não encontrado; atualização recusada porque o schema não pode ser confirmado."
 fi
 [ -n "${DESKCOMM_AGENT_REPORT:-}" ] && eval "${DESKCOMM_AGENT_REPORT_CMD}" banco
 

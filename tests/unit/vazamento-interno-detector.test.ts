@@ -14,8 +14,8 @@ import { TOOL_CATALOG } from "@/lib/mcp/tools/catalog";
  * Este é o ponto sensível do gate, e a assimetria não é opinião:
  *   - FALSO-POSITIVO **destrói a conversa**. A frase que o próprio repo documenta como o
  *     resultado CORRETO — «A etapa "Retorno pos-cirurgico" ainda não existe no funil...» —
- *     contém "etapa" e "funil"; e `fn_seed_default_pipeline_for_org` cria etapas chamadas
- *     "Aguardando pagamento"/"Em separação"/"Entregue", que o tenant renomeia à vontade.
+ *     contém "etapa" e "funil"; tenants legados podem preservar etapas como
+ *     "Aguardando pagamento"/"Em separação"/"Entregue", renomeáveis pelo tenant.
  *     Um detector que cace SIGNIFICADO DE NEGÓCIO bane a única resposta boa que existe.
  *   - FALSO-NEGATIVO deixa o termo técnico chegar ao cliente — ruim, mas é o defeito que
  *     já existe hoje, e o fail-safe do gate garante que o custo nunca vira cliente mudo.
