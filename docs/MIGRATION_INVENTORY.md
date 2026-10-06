@@ -1,17 +1,18 @@
 # Inventário de migrations
 
-Snapshot da branch fase-i-consolidacao-cliente-zero em 2026-10-06 UTC.
+Snapshot reavaliado na branch fase-i-1-correcao-readiness-distribuicao em 2026-10-06 UTC.
 
-- 257 SQLs locais em supabase/migrations, incluindo 00001_initial_schema.sql.
+- 258 SQLs locais em supabase/migrations: 257 migrations com timestamp e o stub 00001_initial_schema.sql.
 - Geral 1 tem 49 linhas no ledger remoto, incluindo registros de baseline/probes e modules/reapply.
-- 256/257 slugs locais aparecem no MANIFEST; o stub 00001_initial_schema.sql não consta na tabela Applied.
-- A baseline atual contém apêndices A–H 0240–0275. Harness clean install não executou; presença estática não prova instalação limpa.
+- 255/257 migrations timestamped têm correspondência de slug no MANIFEST; `0013_ai_faq_items` e `0021_incidents` estão sem linha correspondente, há uma linha histórica `0016_lgpd_emergency_scope` sem arquivo local, e `00001_initial_schema.sql` é um stub sem timestamp.
+- A baseline atual contém apêndices A–H 0240–0275 e a correção de readiness 0276. Harness clean install não executou; presença estática não prova instalação limpa.
 - Ledger remoto tem nomes/timestamps que não correspondem um a um aos prefixos locais. A marcação abaixo é por baseline ou bloco/família, não evidência de aplicação individual de cada SQL.
 
 “Baseline consolidada; sem prova clean” não declara equivalência semântica individual. Finalidade e grupo vêm do MANIFEST e prefixos, como índice de navegação.
 
 | Arquivo local | Bloco/família | Finalidade registrada | Geral 1 | Baseline | MANIFEST |
 |---|---|---|---|---|---|
+| 20261006010000_0276_defaults_genericos_nova_organizacao.sql | Readiness/distribuição | Pipeline e vocabulário genéricos apenas para organizações futuras; sem migração de tenants existentes. | Não aplicado nesta tarefa. | Apêndice idempotente 0276; clean install não provado. | Sim |
 | 00001_initial_schema.sql | Base anterior A–H / infraestrutura | Stub de extensões; migrations posteriores e baseline definem o schema. | Incluída no baseline D2; sem registro remoto individual. | Baseline consolidada; install clean não provado. | Não |
 | 20260428195354_0001_platform_base.sql | Base anterior A–H / infraestrutura | organizations, user_organizations, platform_admins, api_tokens, api_audit_log, user_recovery_codes, idempotency_keys + RLS helpers (fn_user_org_ids, fn_is_platform_admin, fn_user_role_in_org, fn_role_at_least) | Incluída no baseline D2; sem registro remoto individual. | Baseline consolidada; install clean não provado. | Sim |
 | 20260428195513_0002_event_log_and_compat.sql | Base anterior A–H / infraestrutura | event_log + emit_event/fn_log_event helpers + compat aliases (fn_set_updated_at, fn_user_role_in returning int) | Incluída no baseline D2; sem registro remoto individual. | Baseline consolidada; install clean não provado. | Sim |

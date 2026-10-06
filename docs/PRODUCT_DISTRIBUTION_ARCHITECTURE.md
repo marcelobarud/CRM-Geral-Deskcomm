@@ -53,7 +53,7 @@ Semantic Versioning, alinhado ao contrato operacional herdado:
 
 Os exemplos `v1.0.0`, `v1.1.0` e `v1.1.1` são ilustrativos, não releases criadas ou versão inicial escolhida. Clientes podem estar temporariamente em versões distintas por janela de atualização; cada combinação precisa constar da política de suporte. Correção urgente deve retornar à linhagem oficial, não permanecer como patch particular.
 
-**CONFIRMADO:** o workflow versionado já prevê imagens de app/worker/scheduler, mas o compose ainda contém defaults do namespace upstream e `stable`. Antes de distribuir o fork, será necessário validar namespace, permissões e artefatos realmente publicados pelo CRM Geral. A existência do workflow não comprova essas publicações. Nenhum workflow/compose foi alterado nesta fase.
+**Reavaliação Fase I.1 (2026-10-06):** compose, `.env` de exemplo, instalador, updater, Dockerfiles e workflow agora apontam para o fork CRM Geral e identificam app/commit/schema. Isso corrige os defaults de origem, mas não comprova uma release comercial: não há release/tag `stable` no fork e o workflow `release.yml` falhou porque `RELEASE_APP_ID` e `RELEASE_APP_PRIVATE_KEY` não estão configurados. Não distribuir até publicar e verificar as três imagens da mesma versão.
 
 ## 5. Infraestrutura por cliente
 

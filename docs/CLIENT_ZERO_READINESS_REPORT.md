@@ -141,3 +141,11 @@ Auditoria atualizada; relatório de readiness; runbooks de provisionamento, upda
 ## Git e próxima decisão
 
 HEAD-base: 1fa658c63935c98a7d97e9d5578911d1ec61aec1, main já continha H por fast-forward e origin/main apontava ao mesmo commit na captura. Fase I permanece local, sem push, merge ou rebase; não criar branch da próxima fase. A próxima execução recomendada é somente uma fase corretiva dos P1 acima, após review deste NO-GO.
+
+## Reavaliação após Fase I.1
+
+A Fase I.1 implementa as correções prioritárias de distribuição, backup/restore e defaults para organizações futuras, detalhadas em [CLIENT_ZERO_READINESS_CORRECTION.md](CLIENT_ZERO_READINESS_CORRECTION.md). Isso atualiza a lista de P1 corrigidos, mas **não altera a decisão: NO-GO para Cliente Zero**. O fork ainda não publica as imagens `stable`, o workflow de release falhou por configuração ausente, não houve install/update/restore real em ambiente isolado e `test:db` não rodou por falta de Docker.
+
+Nesta verificação, `lint` terminou com 0 erros e 351 avisos; `typecheck` e `build` passaram na cópia isolada, enquanto o checkout principal tinha tipos `.next/dev` inválidos gerados pelo servidor de desenvolvimento ativo. `test:shell` passou integralmente. A tentativa da suite unitária global ficou sem progresso por mais de sete minutos, reportou timeout terminando o worker de `app/api/v1/products/route.test.ts` e foi interrompida após mais de 20 minutos; como não houve resumo final, não há contagem confiável nem aprovação global. `test:db` permaneceu bloqueado por `docker: command not found`.
+
+Não foi usado o Geral 1 nem publicada qualquer alteração. A branch `fase-i-1-correcao-readiness-distribuicao` continua local e sem merge, push ou rebase. O arquivo não rastreado `docs/DESKCOMM_UPSTREAM_AUDIT.md` continua preservado e seu hash não mudou.
